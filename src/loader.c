@@ -41,7 +41,7 @@ void read_seg(uint32_t dst, uint32_t size, uint32_t offset)
     /* 由于此时没有启动文件系统，只能通过PIO模式访问硬盘，读取是一个扇区一个扇区的读 */
     uint32_t end = dst + size;
     dst &= ~(SECT_SIZE - 1);
-    uint32_t sect_no = (offset / SECT_SIZE) + 2; // 根据offset向下舍入到扇区边界，最后得到的sect_no是offset所处的扇区的序号
+    uint32_t sect_no = (offset / SECT_SIZE) + 1; // 根据offset向下舍入到扇区边界，最后得到的sect_no是offset所处的扇区的序号
     while (dst < end) {
         read_sect((uint8_t*)dst, sect_no);
         dst += SECT_SIZE;

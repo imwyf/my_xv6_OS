@@ -145,7 +145,7 @@
 
 #else // not __ASSEMBLER__
 
-#include "types.h"
+#include <stdint.h>
 
 // Segment Descriptors
 struct Segdesc {

@@ -1,7 +1,7 @@
 #ifndef _X86_H_
 #define _X86_H_
 
-#include "types.h"
+#include <stdint.h>
 
 static inline void
 hlt(void)

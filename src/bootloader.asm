@@ -95,7 +95,7 @@ boot32:
   movl    $_start, %esp
     7c40:	bc 00 7c 00 00       	mov    $0x7c00,%esp
   call    loader
-    7c45:	e8 cb 00 00 00       	call   7d15 <loader>
+    7c45:	e8 d9 00 00 00       	call   7d23 <loader>
 
 00007c4a <boot_fail_loop>:
 
@@ -122,178 +122,176 @@ boot_fail_loop:
 
 00007c6a <waitdisk>:
 
-/**
- * 读取0x1F7端口来判断硬盘是否可读
- */
-void waitdisk(void)
-{
-    7c6a:	55                   	push   %ebp
-    7c6b:	89 e5                	mov    %esp,%ebp
-
 static inline uint8_t
 inb(int port)
 {
     uint8_t data;
     asm volatile("inb %w1,%0"
-    7c6d:	ba f7 01 00 00       	mov    $0x1f7,%edx
-    7c72:	ec                   	in     (%dx),%al
+    7c6a:	ba f7 01 00 00       	mov    $0x1f7,%edx
+    7c6f:	ec                   	in     (%dx),%al
+/**
+ * 读取0x1F7端口来判断硬盘是否可读
+ */
+void waitdisk(void)
+{
     while ((inb(0x1F7) & 0xC0) != 0x40)
-    7c73:	83 e0 c0             	and    $0xffffffc0,%eax
-    7c76:	3c 40                	cmp    $0x40,%al
-    7c78:	75 f8                	jne    7c72 <waitdisk+0x8>
+    7c70:	83 e0 c0             	and    $0xffffffc0,%eax
+    7c73:	3c 40                	cmp    $0x40,%al
+    7c75:	75 f8                	jne    7c6f <waitdisk+0x5>
         ;
 }
-    7c7a:	5d                   	pop    %ebp
-    7c7b:	c3                   	ret    
+    7c77:	c3                   	ret    
 
-00007c7c <read_sect>:
+00007c78 <read_sect>:
 
 /**
  * PIO模式：从硬盘第sect_no扇区开始读取下一个扇区至内存的dst
  */
 void read_sect(void* dst, uint32_t sect_no)
 {
-    7c7c:	55                   	push   %ebp
-    7c7d:	89 e5                	mov    %esp,%ebp
-    7c7f:	57                   	push   %edi
-    7c80:	53                   	push   %ebx
-    7c81:	8b 5d 0c             	mov    0xc(%ebp),%ebx
+    7c78:	55                   	push   %ebp
+    7c79:	89 e5                	mov    %esp,%ebp
+    7c7b:	57                   	push   %edi
+    7c7c:	53                   	push   %ebx
+    7c7d:	8b 5d 0c             	mov    0xc(%ebp),%ebx
     waitdisk();
-    7c84:	e8 e1 ff ff ff       	call   7c6a <waitdisk>
+    7c80:	e8 e5 ff ff ff       	call   7c6a <waitdisk>
  * outb(port,data): 向port写入1字节数据data
  */
 static inline void
 outb(int port, uint8_t data)
 {
     asm volatile("outb %0,%w1"
-    7c89:	ba f2 01 00 00       	mov    $0x1f2,%edx
-    7c8e:	b8 01 00 00 00       	mov    $0x1,%eax
-    7c93:	ee                   	out    %al,(%dx)
-    7c94:	b2 f3                	mov    $0xf3,%dl
-    7c96:	89 d8                	mov    %ebx,%eax
-    7c98:	ee                   	out    %al,(%dx)
-    7c99:	0f b6 c7             	movzbl %bh,%eax
-    7c9c:	b2 f4                	mov    $0xf4,%dl
-    7c9e:	ee                   	out    %al,(%dx)
+    7c85:	b8 01 00 00 00       	mov    $0x1,%eax
+    7c8a:	ba f2 01 00 00       	mov    $0x1f2,%edx
+    7c8f:	ee                   	out    %al,(%dx)
+    7c90:	ba f3 01 00 00       	mov    $0x1f3,%edx
+    7c95:	89 d8                	mov    %ebx,%eax
+    7c97:	ee                   	out    %al,(%dx)
 
     outb(0x1F2, 1); // 读一个扇区
     outb(0x1F3, sect_no);
     outb(0x1F4, sect_no >> 8);
+    7c98:	89 d8                	mov    %ebx,%eax
+    7c9a:	c1 e8 08             	shr    $0x8,%eax
+    7c9d:	ba f4 01 00 00       	mov    $0x1f4,%edx
+    7ca2:	ee                   	out    %al,(%dx)
     outb(0x1F5, sect_no >> 16);
-    7c9f:	89 d8                	mov    %ebx,%eax
-    7ca1:	c1 e8 10             	shr    $0x10,%eax
-    7ca4:	b2 f5                	mov    $0xf5,%dl
-    7ca6:	ee                   	out    %al,(%dx)
+    7ca3:	89 d8                	mov    %ebx,%eax
+    7ca5:	c1 e8 10             	shr    $0x10,%eax
+    7ca8:	ba f5 01 00 00       	mov    $0x1f5,%edx
+    7cad:	ee                   	out    %al,(%dx)
     outb(0x1F6, (sect_no >> 24) | 0xE0);
-    7ca7:	c1 eb 18             	shr    $0x18,%ebx
-    7caa:	89 d8                	mov    %ebx,%eax
-    7cac:	83 c8 e0             	or     $0xffffffe0,%eax
-    7caf:	b2 f6                	mov    $0xf6,%dl
-    7cb1:	ee                   	out    %al,(%dx)
-    7cb2:	b2 f7                	mov    $0xf7,%dl
-    7cb4:	b8 20 00 00 00       	mov    $0x20,%eax
-    7cb9:	ee                   	out    %al,(%dx)
+    7cae:	89 d8                	mov    %ebx,%eax
+    7cb0:	c1 e8 18             	shr    $0x18,%eax
+    7cb3:	83 c8 e0             	or     $0xffffffe0,%eax
+    7cb6:	ba f6 01 00 00       	mov    $0x1f6,%edx
+    7cbb:	ee                   	out    %al,(%dx)
+    7cbc:	b8 20 00 00 00       	mov    $0x20,%eax
+    7cc1:	ba f7 01 00 00       	mov    $0x1f7,%edx
+    7cc6:	ee                   	out    %al,(%dx)
     outb(0x1F7, 0x20); // 0x20 代表读扇区
 
     waitdisk();
-    7cba:	e8 ab ff ff ff       	call   7c6a <waitdisk>
+    7cc7:	e8 9e ff ff ff       	call   7c6a <waitdisk>
     asm volatile("cld\n\trepne\n\tinsl"
-    7cbf:	8b 7d 08             	mov    0x8(%ebp),%edi
-    7cc2:	b9 80 00 00 00       	mov    $0x80,%ecx
-    7cc7:	ba f0 01 00 00       	mov    $0x1f0,%edx
-    7ccc:	fc                   	cld    
-    7ccd:	f2 6d                	repnz insl (%dx),%es:(%edi)
+    7ccc:	8b 7d 08             	mov    0x8(%ebp),%edi
+    7ccf:	b9 80 00 00 00       	mov    $0x80,%ecx
+    7cd4:	ba f0 01 00 00       	mov    $0x1f0,%edx
+    7cd9:	fc                   	cld    
+    7cda:	f2 6d                	repnz insl (%dx),%es:(%edi)
 
     insl(0x1F0, dst, SECT_SIZE / 4); // 读到dst处
 }
-    7ccf:	5b                   	pop    %ebx
-    7cd0:	5f                   	pop    %edi
-    7cd1:	5d                   	pop    %ebp
-    7cd2:	c3                   	ret    
+    7cdc:	5b                   	pop    %ebx
+    7cdd:	5f                   	pop    %edi
+    7cde:	5d                   	pop    %ebp
+    7cdf:	c3                   	ret    
 
-00007cd3 <read_seg>:
+00007ce0 <read_seg>:
 {
-    7cd3:	55                   	push   %ebp
-    7cd4:	89 e5                	mov    %esp,%ebp
-    7cd6:	57                   	push   %edi
-    7cd7:	56                   	push   %esi
-    7cd8:	53                   	push   %ebx
-    7cd9:	83 ec 08             	sub    $0x8,%esp
-    7cdc:	8b 5d 08             	mov    0x8(%ebp),%ebx
+    7ce0:	55                   	push   %ebp
+    7ce1:	89 e5                	mov    %esp,%ebp
+    7ce3:	57                   	push   %edi
+    7ce4:	56                   	push   %esi
+    7ce5:	53                   	push   %ebx
+    7ce6:	83 ec 0c             	sub    $0xc,%esp
+    7ce9:	8b 5d 08             	mov    0x8(%ebp),%ebx
     uint32_t end = dst + size;
-    7cdf:	89 de                	mov    %ebx,%esi
-    7ce1:	03 75 0c             	add    0xc(%ebp),%esi
+    7cec:	89 df                	mov    %ebx,%edi
+    7cee:	03 7d 0c             	add    0xc(%ebp),%edi
     dst &= ~(SECT_SIZE - 1);
-    7ce4:	81 e3 00 fe ff ff    	and    $0xfffffe00,%ebx
+    7cf1:	81 e3 00 fe ff ff    	and    $0xfffffe00,%ebx
     uint32_t sect_no = (offset / SECT_SIZE) + 1; // 根据offset向下舍入到扇区边界，最后得到的sect_no是offset所处的扇区的序号
-    7cea:	8b 7d 10             	mov    0x10(%ebp),%edi
-    7ced:	c1 ef 09             	shr    $0x9,%edi
-    7cf0:	83 c7 01             	add    $0x1,%edi
+    7cf7:	8b 75 10             	mov    0x10(%ebp),%esi
+    7cfa:	c1 ee 09             	shr    $0x9,%esi
+    7cfd:	83 c6 01             	add    $0x1,%esi
     while (dst < end) {
-    7cf3:	39 de                	cmp    %ebx,%esi
-    7cf5:	76 16                	jbe    7d0d <read_seg+0x3a>
+    7d00:	39 df                	cmp    %ebx,%edi
+    7d02:	76 17                	jbe    7d1b <read_seg+0x3b>
         read_sect((uint8_t*)dst, sect_no);
-    7cf7:	89 7c 24 04          	mov    %edi,0x4(%esp)
-    7cfb:	89 1c 24             	mov    %ebx,(%esp)
-    7cfe:	e8 79 ff ff ff       	call   7c7c <read_sect>
+    7d04:	83 ec 08             	sub    $0x8,%esp
+    7d07:	56                   	push   %esi
+    7d08:	53                   	push   %ebx
+    7d09:	e8 6a ff ff ff       	call   7c78 <read_sect>
         dst += SECT_SIZE;
-    7d03:	81 c3 00 02 00 00    	add    $0x200,%ebx
+    7d0e:	81 c3 00 02 00 00    	add    $0x200,%ebx
     while (dst < end) {
-    7d09:	39 de                	cmp    %ebx,%esi
-    7d0b:	77 ea                	ja     7cf7 <read_seg+0x24>
+    7d14:	83 c4 10             	add    $0x10,%esp
+    7d17:	39 df                	cmp    %ebx,%edi
+    7d19:	77 e9                	ja     7d04 <read_seg+0x24>
 }
-    7d0d:	83 c4 08             	add    $0x8,%esp
-    7d10:	5b                   	pop    %ebx
-    7d11:	5e                   	pop    %esi
-    7d12:	5f                   	pop    %edi
-    7d13:	5d                   	pop    %ebp
-    7d14:	c3                   	ret    
+    7d1b:	8d 65 f4             	lea    -0xc(%ebp),%esp
+    7d1e:	5b                   	pop    %ebx
+    7d1f:	5e                   	pop    %esi
+    7d20:	5f                   	pop    %edi
+    7d21:	5d                   	pop    %ebp
+    7d22:	c3                   	ret    
 
-00007d15 <loader>:
+00007d23 <loader>:
 {
-    7d15:	55                   	push   %ebp
-    7d16:	89 e5                	mov    %esp,%ebp
-    7d18:	56                   	push   %esi
-    7d19:	53                   	push   %ebx
-    7d1a:	83 ec 10             	sub    $0x10,%esp
+    7d23:	55                   	push   %ebp
+    7d24:	89 e5                	mov    %esp,%ebp
+    7d26:	56                   	push   %esi
+    7d27:	53                   	push   %ebx
     read_seg((uint32_t)ELF_HEADER_TMP, PAGE_SIZE, 0); // 先读入一页来找到ELF头
-    7d1d:	c7 44 24 08 00 00 00 	movl   $0x0,0x8(%esp)
-    7d24:	00 
-    7d25:	c7 44 24 04 00 10 00 	movl   $0x1000,0x4(%esp)
-    7d2c:	00 
-    7d2d:	c7 04 24 00 00 01 00 	movl   $0x10000,(%esp)
-    7d34:	e8 9a ff ff ff       	call   7cd3 <read_seg>
+    7d28:	83 ec 04             	sub    $0x4,%esp
+    7d2b:	6a 00                	push   $0x0
+    7d2d:	68 00 10 00 00       	push   $0x1000
+    7d32:	68 00 00 01 00       	push   $0x10000
+    7d37:	e8 a4 ff ff ff       	call   7ce0 <read_seg>
     if (ELF_HEADER_TMP->e_ident[0] != 0x7f || ELF_HEADER_TMP->e_ident[1] != 'E' || ELF_HEADER_TMP->e_ident[2] != 'L' || ELF_HEADER_TMP->e_ident[3] != 'F') {
-    7d39:	81 3d 00 00 01 00 7f 	cmpl   $0x464c457f,0x10000
-    7d40:	45 4c 46 
-    7d43:	74 02                	je     7d47 <loader+0x32>
-    7d45:	eb fe                	jmp    7d45 <loader+0x30>
-    Elf_Phdr* phdr = (Elf_Phdr*)((uint8_t*)ELF_HEADER_TMP + ELF_HEADER_TMP->e_phoff); // 通过ELF头找到 Program Header Table
-    7d47:	a1 1c 00 01 00       	mov    0x1001c,%eax
-    7d4c:	8d 98 00 00 01 00    	lea    0x10000(%eax),%ebx
-    Elf_Phdr* ephdr = phdr + ELF_HEADER_TMP->e_phnum; // Program Header Table 尾指针
-    7d52:	0f b7 35 2c 00 01 00 	movzwl 0x1002c,%esi
-    7d59:	c1 e6 05             	shl    $0x5,%esi
-    7d5c:	01 de                	add    %ebx,%esi
+    7d3c:	83 c4 10             	add    $0x10,%esp
+    7d3f:	81 3d 00 00 01 00 7f 	cmpl   $0x464c457f,0x10000
+    7d46:	45 4c 46 
+    7d49:	74 01                	je     7d4c <loader+0x29>
+    asm volatile("hlt");
+    7d4b:	f4                   	hlt    
+    Elf32_Phdr* phdr = (Elf32_Phdr*)((uint8_t*)ELF_HEADER_TMP + ELF_HEADER_TMP->e_phoff); // 通过ELF头找到 Program Header Table
+    7d4c:	a1 1c 00 01 00       	mov    0x1001c,%eax
+    7d51:	8d 98 00 00 01 00    	lea    0x10000(%eax),%ebx
+    Elf32_Phdr* ephdr = phdr + ELF_HEADER_TMP->e_phnum; // Program Header Table 尾指针
+    7d57:	0f b7 35 2c 00 01 00 	movzwl 0x1002c,%esi
+    7d5e:	c1 e6 05             	shl    $0x5,%esi
+    7d61:	01 de                	add    %ebx,%esi
     for (; phdr < ephdr; phdr++) // 遍历Table中每一项
-    7d5e:	39 f3                	cmp    %esi,%ebx
-    7d60:	73 20                	jae    7d82 <loader+0x6d>
+    7d63:	39 f3                	cmp    %esi,%ebx
+    7d65:	73 1b                	jae    7d82 <loader+0x5f>
         read_seg(phdr->p_paddr, phdr->p_memsz, phdr->p_offset); // paddr该段的物理地址 memsz该段占用的字节 offset该段在文件中的偏移
-    7d62:	8b 43 04             	mov    0x4(%ebx),%eax
-    7d65:	89 44 24 08          	mov    %eax,0x8(%esp)
-    7d69:	8b 43 14             	mov    0x14(%ebx),%eax
-    7d6c:	89 44 24 04          	mov    %eax,0x4(%esp)
-    7d70:	8b 43 0c             	mov    0xc(%ebx),%eax
-    7d73:	89 04 24             	mov    %eax,(%esp)
-    7d76:	e8 58 ff ff ff       	call   7cd3 <read_seg>
+    7d67:	83 ec 04             	sub    $0x4,%esp
+    7d6a:	ff 73 04             	push   0x4(%ebx)
+    7d6d:	ff 73 14             	push   0x14(%ebx)
+    7d70:	ff 73 0c             	push   0xc(%ebx)
+    7d73:	e8 68 ff ff ff       	call   7ce0 <read_seg>
     for (; phdr < ephdr; phdr++) // 遍历Table中每一项
-    7d7b:	83 c3 20             	add    $0x20,%ebx
+    7d78:	83 c3 20             	add    $0x20,%ebx
+    7d7b:	83 c4 10             	add    $0x10,%esp
     7d7e:	39 de                	cmp    %ebx,%esi
-    7d80:	77 e0                	ja     7d62 <loader+0x4d>
+    7d80:	77 e5                	ja     7d67 <loader+0x44>
     ((void (*)(void))(ELF_HEADER_TMP->e_entry))(); // 将e_entry作为函数指针跳入
     7d82:	ff 15 18 00 01 00    	call   *0x10018
 }
-    7d88:	83 c4 10             	add    $0x10,%esp
+    7d88:	8d 65 f8             	lea    -0x8(%ebp),%esp
     7d8b:	5b                   	pop    %ebx
     7d8c:	5e                   	pop    %esi
     7d8d:	5d                   	pop    %ebp

@@ -3,7 +3,7 @@
 
 #ifndef __ASSEMBLER__
 #include "mmu.h"
-#include "types.h"
+#include <stdint.h>
 #endif /* not __ASSEMBLER__ */
 
 /*

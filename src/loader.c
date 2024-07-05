@@ -2,12 +2,12 @@
  * loader.c - 加载ELF格式的内核二进制文件进内存，然后启动内核
  *************************************************************************/
 
-#include "elf.h"
 #include "x86.h"
+#include <elf.h>
 
 #define SECT_SIZE 512
 #define PAGE_SIZE SECT_SIZE * 8 // 4kb
-#define ELF_HEADER_TMP ((Elf_Ehdr*)0x10000) // 内核镜像被拷贝到的位置
+#define ELF_HEADER_TMP ((Elf32_Ehdr*)0x10000) // 内核镜像被拷贝到的位置
 
 void read_sect(void*, uint32_t);
 void read_seg(uint32_t, uint32_t, uint32_t);
@@ -19,13 +19,12 @@ void loader()
     /* 检测是否是elf文件 */
     if (ELF_HEADER_TMP->e_ident[0] != 0x7f || ELF_HEADER_TMP->e_ident[1] != 'E' || ELF_HEADER_TMP->e_ident[2] != 'L' || ELF_HEADER_TMP->e_ident[3] != 'F') {
         // TODO：打印错误
-        while (1)
-            ;
+        hlt();
     }
 
     /* 复制各个段到指定的内存地址 */
-    Elf_Phdr* phdr = (Elf_Phdr*)((uint8_t*)ELF_HEADER_TMP + ELF_HEADER_TMP->e_phoff); // 通过ELF头找到 Program Header Table
-    Elf_Phdr* ephdr = phdr + ELF_HEADER_TMP->e_phnum; // Program Header Table 尾指针
+    Elf32_Phdr* phdr = (Elf32_Phdr*)((uint8_t*)ELF_HEADER_TMP + ELF_HEADER_TMP->e_phoff); // 通过ELF头找到 Program Header Table
+    Elf32_Phdr* ephdr = phdr + ELF_HEADER_TMP->e_phnum; // Program Header Table 尾指针
     for (; phdr < ephdr; phdr++) // 遍历Table中每一项
         read_seg(phdr->p_paddr, phdr->p_memsz, phdr->p_offset); // paddr该段的物理地址 memsz该段占用的字节 offset该段在文件中的偏移
 

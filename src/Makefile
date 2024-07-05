@@ -6,6 +6,7 @@ OBJCOPY = objcopy
 OBJDUMP = objdump
 # 编译选项
 CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
+CFLAGS += -I/usr/include
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
 LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null | head -n 1)
@@ -66,7 +67,7 @@ ifndef CPUS
 CPUS := 2
 endif
 
-QEMUOPTS = -drive file=myos.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512
+QEMUOPTS = -drive file=myos.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512 -nographic
 
 qemu: myos.img
 	$(QEMU) -serial mon:stdio $(QEMUOPTS)
@@ -80,5 +81,5 @@ qemu-gdb: myos.img .gdbinit
 
 clean:
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
-	*.o *.d *.asm *.sym *.out bootloader kernel
+	*.o *.d *.asm *.sym *.out bootloader kernel myos.img .gdbinit
 

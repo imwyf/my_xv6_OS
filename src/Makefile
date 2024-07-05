@@ -16,7 +16,7 @@ OBJS = \
 myos.img: bootloader kernel
 	dd if=/dev/zero of=myos.img count=10000
 	dd if=bootloader of=myos.img conv=notrunc
-	dd if=kernel of=myos.img seek=1 conv=notrunc
+	dd if=kernel of=myos.img seek=2 conv=notrunc
 
 bootloader: boot.S loader.c
 	$(CC) $(CFLAGS) -fno-pic -O -nostdinc -I. -c loader.c
@@ -24,7 +24,7 @@ bootloader: boot.S loader.c
 	$(LD) $(LDFLAGS) -N -e start -Ttext 0x7C00 -o bootloader.out boot.o loader.o
 	$(OBJDUMP) -S bootloader.out > bootloader.asm
 	$(OBJCOPY) -S -O binary -j .text bootloader.out bootloader
-	./sign.pl bootloader
+# ./sign.pl bootloader
 
 kernel: entry $(OBJS) kernel.ld
 	$(LD) $(LDFLAGS) -T kernel.ld -o kernel entry.o $(OBJS)

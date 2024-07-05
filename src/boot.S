@@ -13,6 +13,14 @@
 .globl _start
 _start:                                     # 相当于c语言中的main函数，是汇编程序的入口
   .code16                                   # 指示以下代码是在实模式下执行
+# 利用13中断读取loader至7e00
+	mov $0x7e00, %bx
+	mov $0x2, %ah
+	mov $0x2, %cx
+	mov $1, %al
+	mov $0x0080, %dx
+	int $0x13
+
   cli                                       # 关中断，因为后面对段寄存器的操作需要关中断
   cld                                       # 将标志寄存器中的方向标志位DF设置为0，使得字符串操作指令（movs）将按照从低地址到高地址的方向执行
 
@@ -87,8 +95,8 @@ gdtr:                                       # gdtr寄存器会载入这个地址
   .long   gdt                               # gdt表的地址，大小2个word
 
 # 添加启动区最后的签名 magic number
-#.org 510  
-#  .word 0xAA55# 添加启动区最后的签名 magic number
+.org 510  
+  .word 0xAA55# 添加启动区最后的签名 magic number
 
 # 注1：初始代码段的基地址为啥会设为0？
 # 答：保护模式下，地址线变成了 32 根，这意味着只需要偏移量就能寻址整个 4GB 内存空间

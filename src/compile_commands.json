@@ -1,25 +1,72 @@
 [
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-fno-pic",
-      "-fno-builtin",
-      "-fno-strict-aliasing",
-      "-O2",
-      "-Wall",
-      "-ggdb",
-      "-m32",
-      "-Werror",
-      "-fno-omit-frame-pointer",
-      "-I/usr/include",
-      "-fno-stack-protector",
-      "-fno-pic",
-      "-nostdinc",
-      "-I.",
-      "-c",
-      "entry.S"
-    ],
-    "directory": "/home/imwyf/my_xv6_OS/src",
-    "file": "/home/imwyf/my_xv6_OS/src/entry.S"
-  }
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-fno-pic",
+            "-fno-builtin",
+            "-fno-strict-aliasing",
+            "-O2",
+            "-Wall",
+            "-ggdb",
+            "-m32",
+            "-Werror",
+            "-fno-omit-frame-pointer",
+            "-I/usr/include",
+            "-fno-stack-protector",
+            "-fno-pic",
+            "-nostdinc",
+            "-I.",
+            "entry.S"
+        ],
+        "directory": "/home/imwyf/my_xv6_OS/src",
+        "file": "entry.S"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-fno-pic",
+            "-fno-builtin",
+            "-fno-strict-aliasing",
+            "-O2",
+            "-Wall",
+            "-ggdb",
+            "-m32",
+            "-Werror",
+            "-fno-omit-frame-pointer",
+            "-I/usr/include",
+            "-fno-stack-protector",
+            "-fno-pic",
+            "-O",
+            "-nostdinc",
+            "-I.",
+            "loader.c"
+        ],
+        "directory": "/home/imwyf/my_xv6_OS/src",
+        "file": "loader.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-fno-pic",
+            "-fno-builtin",
+            "-fno-strict-aliasing",
+            "-O2",
+            "-Wall",
+            "-ggdb",
+            "-m32",
+            "-Werror",
+            "-fno-omit-frame-pointer",
+            "-I/usr/include",
+            "-fno-stack-protector",
+            "-fno-pic",
+            "-nostdinc",
+            "-I.",
+            "boot.S"
+        ],
+        "directory": "/home/imwyf/my_xv6_OS/src",
+        "file": "boot.S"
+    }
 ]

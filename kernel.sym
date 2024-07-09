@@ -1,0 +1,6 @@
+00000000 main.c
+80102000 stack
+80100000 kernel_entry
+80101000 entrypgdir
+00100000 _start
+80100028 main

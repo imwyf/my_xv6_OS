@@ -1,112 +1,44 @@
 [
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-fno-pic",
-      "-fno-builtin",
-      "-fno-strict-aliasing",
-      "-O1",
-      "-Wall",
-      "-ggdb",
-      "-m32",
-      "-Werror",
-      "-fno-omit-frame-pointer",
-      "-std=gnu99",
-      "-I/usr/include",
-      "-I.",
-      "-fno-stack-protector",
-      "-c",
-      "loader.c"
-    ],
-    "directory": "/home/imwyf/my_xv6_OS",
-    "file": "/home/imwyf/my_xv6_OS/loader.c"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-fno-pic",
-      "-fno-builtin",
-      "-fno-strict-aliasing",
-      "-O1",
-      "-Wall",
-      "-ggdb",
-      "-m32",
-      "-Werror",
-      "-fno-omit-frame-pointer",
-      "-std=gnu99",
-      "-I/usr/include",
-      "-I.",
-      "-fno-stack-protector",
-      "-c",
-      "boot.S"
-    ],
-    "directory": "/home/imwyf/my_xv6_OS",
-    "file": "/home/imwyf/my_xv6_OS/boot.S"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-fno-pic",
-      "-fno-builtin",
-      "-fno-strict-aliasing",
-      "-O1",
-      "-Wall",
-      "-ggdb",
-      "-m32",
-      "-Werror",
-      "-fno-omit-frame-pointer",
-      "-std=gnu99",
-      "-I/usr/include",
-      "-I.",
-      "-fno-stack-protector",
-      "-c",
-      "kernel_entry.S"
-    ],
-    "directory": "/home/imwyf/my_xv6_OS",
-    "file": "/home/imwyf/my_xv6_OS/kernel_entry.S"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-fno-pic",
-      "-fno-builtin",
-      "-fno-strict-aliasing",
-      "-O1",
-      "-Wall",
-      "-ggdb",
-      "-m32",
-      "-Werror",
-      "-fno-omit-frame-pointer",
-      "-std=gnu99",
-      "-I/usr/include",
-      "-I.",
-      "-fno-stack-protector",
-      "-c",
-      "main.c"
-    ],
-    "directory": "/home/imwyf/my_xv6_OS",
-    "file": "/home/imwyf/my_xv6_OS/main.c"
-  },
-  {
-    "arguments": [
-      "/usr/bin/gcc",
-      "-fno-pic",
-      "-fno-builtin",
-      "-fno-strict-aliasing",
-      "-O1",
-      "-Wall",
-      "-ggdb",
-      "-m32",
-      "-Werror",
-      "-fno-omit-frame-pointer",
-      "-std=gnu99",
-      "-I/usr/include",
-      "-I.",
-      "-fno-stack-protector",
-      "-c",
-      "kernel_mem.c"
-    ],
-    "directory": "/home/imwyf/my_xv6_OS",
-    "file": "/home/imwyf/my_xv6_OS/kernel_mem.c"
-  }
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-fno-pic",
+            "-fno-builtin",
+            "-fno-strict-aliasing",
+            "-O1",
+            "-Wall",
+            "-ggdb",
+            "-m32",
+            "-Werror",
+            "-fno-omit-frame-pointer",
+            "-std=gnu99",
+            "-I.",
+            "-fno-stack-protector",
+            "kernel_entry.S"
+        ],
+        "directory": "/home/imwyf/my_xv6_OS",
+        "file": "kernel_entry.S"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-fno-pic",
+            "-fno-builtin",
+            "-fno-strict-aliasing",
+            "-O1",
+            "-Wall",
+            "-ggdb",
+            "-m32",
+            "-Werror",
+            "-fno-omit-frame-pointer",
+            "-std=gnu99",
+            "-I.",
+            "-fno-stack-protector",
+            "kernel_mem.c"
+        ],
+        "directory": "/home/imwyf/my_xv6_OS",
+        "file": "kernel_mem.c"
+    }
 ]

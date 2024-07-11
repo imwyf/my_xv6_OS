@@ -6,7 +6,7 @@
 
 .text
 .globl _start
-_start = V2P_WO(kernel_entry) 
+_start = K_V2P_WO(kernel_entry) 
 # 我们还没有开启分页，而内核代码实际被存放在物理地址 0x00100000 处，因此手动将虚拟地址转换为其对应的物理地址：即 0x80100000 -> 0x00100000
 
 .globl kernel_entry
@@ -16,7 +16,7 @@ kernel_entry:
   orl     $(CR4_PSE), %eax                  # 4MB/页
   movl    %eax, %cr4
   # 将 entry_pgdir 的物理地址载入 cr3 寄存器并开启分页
-  movl    $(V2P_WO(entry_pgdir)), %eax
+  movl    $(K_V2P_WO(entry_pgdir)), %eax
   movl    %eax, %cr3
   movl    %cr0, %eax
   orl     $(CR0_PG|CR0_WP), %eax

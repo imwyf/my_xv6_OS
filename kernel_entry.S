@@ -1,5 +1,5 @@
 # *************************************************************************
-# * kernel_entry.S - 内核的入口，负责开启分页机制，
+# * kernel_entry.S - 内核的入口，负责开启分页机制，然后跳到 main 以实现系统初始化
 # *************************************************************************
 
 #include <inc/mmu.h>
@@ -15,8 +15,8 @@ kernel_entry:
   movl    %cr4, %eax
   orl     $(CR4_PSE), %eax                  # 4MB/页
   movl    %eax, %cr4
-  # 将 entrypgdir 的物理地址载入 cr3 寄存器并开启分页
-  movl    $(V2P_WO(entrypgdir)), %eax
+  # 将 entry_pgdir 的物理地址载入 cr3 寄存器并开启分页
+  movl    $(V2P_WO(entry_pgdir)), %eax
   movl    %eax, %cr3
   movl    %cr0, %eax
   orl     $(CR0_PG|CR0_WP), %eax

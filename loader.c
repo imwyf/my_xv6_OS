@@ -3,7 +3,7 @@
  *************************************************************************/
 
 #include "inc/x86.h"
-#include <elf.h>
+#include <inc/elf.h>
 
 #define SECT_SIZE 512
 #define PAGE_SIZE SECT_SIZE * 8 // 4kb

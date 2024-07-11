@@ -5,14 +5,16 @@ LD = ld
 OBJCOPY = objcopy
 OBJDUMP = objdump
 # 编译选项
-CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O1 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer
-CFLAGS += -I/usr/include
+CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O1 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer -std=gnu99
+CFLAGS += -I.
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
 LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null | head -n 1)
+GCC_LIB := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
 
 OBJS = \
-	main.o
+	main.o\
+	kernel_mem.o
 
 myos.img: bootloader kernel
 	dd if=/dev/zero of=myos.img count=10000
@@ -20,22 +22,22 @@ myos.img: bootloader kernel
 	dd if=kernel of=myos.img seek=2 conv=notrunc
 
 bootloader: boot.S loader.c
-	$(CC) $(CFLAGS) -fno-pic -nostdinc -I. -c loader.c
-	$(CC) $(CFLAGS) -fno-pic -nostdinc -I. -c boot.S
+	$(CC) $(CFLAGS) -c loader.c
+	$(CC) $(CFLAGS) -c boot.S
 	$(LD) $(LDFLAGS) -N -e start -Ttext 0x7C00 -o bootloader.out boot.o loader.o
 	$(OBJDUMP) -S bootloader.out > bootloader.asm
 	$(OBJCOPY) -S -O binary -j .text bootloader.out bootloader
 
 kernel: kernel_entry $(OBJS)
-	$(LD) $(LDFLAGS) -T kernel.ld -o kernel kernel_entry.o $(OBJS)
+	$(LD) $(LDFLAGS) -T kernel.ld -o kernel kernel_entry.o $(OBJS) $(GCC_LIB)
 	$(OBJDUMP) -S kernel > kernel.asm
 	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
 kernel_entry:
-	$(CC) $(CFLAGS) -fno-pic -nostdinc -I. -c kernel_entry.S
+	$(CC) $(CFLAGS) -c kernel_entry.S
 
 $(OBJS): %.o: %.c
-	$(CC) $(CFLAGS) -fno-pic -nostdinc -I. -c $<
+	$(CC) $(CFLAGS) -c $<
 
 ifndef QEMU
 QEMU = $(shell if which qemu > /dev/null; \

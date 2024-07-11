@@ -1,7 +1,7 @@
 #ifndef _X86_H_
 #define _X86_H_
 
-#include <stdint.h>
+#include "types.h"
 
 static inline void
 hlt(void)
@@ -19,6 +19,15 @@ static inline void
 stosb(void* addr, int data, int cnt)
 {
     asm volatile("cld; rep stosb"
+                 : "=D"(addr), "=c"(cnt)
+                 : "0"(addr), "1"(cnt), "a"(data)
+                 : "memory", "cc");
+}
+
+static inline void
+stosl(void* addr, int data, int cnt)
+{
+    asm volatile("cld; rep stosl"
                  : "=D"(addr), "=c"(cnt)
                  : "0"(addr), "1"(cnt), "a"(data)
                  : "memory", "cc");

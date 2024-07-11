@@ -236,7 +236,7 @@ outb(int port, uint8_t data)
     7e84:	03 7d 0c             	add    0xc(%ebp),%edi
     dst &= ~(SECT_SIZE - 1);
     7e87:	81 e3 00 fe ff ff    	and    $0xfffffe00,%ebx
-    uint32_t sect_no = (offset / SECT_SIZE) + 2; // 根据offset向下舍入到扇区边界，最后得到的sect_no是offset所处的扇区的序号
+    uint32_t sect_no = (offset / SECT_SIZE) + 2; // 根据offset向下舍入到扇区边界，最后得到的sect_no是offset所处的扇区的序号，+2因为ELF文件从第三个扇区开始
     7e8d:	8b 75 10             	mov    0x10(%ebp),%esi
     7e90:	c1 ee 09             	shr    $0x9,%esi
     7e93:	83 c6 02             	add    $0x2,%esi

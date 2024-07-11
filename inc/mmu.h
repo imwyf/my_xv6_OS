@@ -2,7 +2,7 @@
 #define _INC_MMU_H_
 
 #ifndef __ASSEMBLER__
-#include <stdint.h>
+#include "types.h"
 #endif /* not __ASSEMBLER__ */
 
 /*
@@ -31,7 +31,7 @@
  *                     |                              | RW/--
  *                     |   Remapped Physical Memory   | RW/--
  *                     |                              | RW/--
- *    KERNBASE, ---->  +------------------------------+ 0xf0000000      --+
+ *    K_ADDR_BASE, ---->  +------------------------------+ 0xf0000000      --+
  *    KSTACKTOP        |     CPU0's Kernel Stack      | RW/--  KSTKSIZE   |
  *                     | - - - - - - - - - - - - - - -|                   |
  *                     |      Invalid Memory (*)      | --/--  KSTKGAP    |
@@ -81,25 +81,26 @@
  *     there if desired.  JOS user programs map pages temporarily at UTEMP.
  */
 
-#define EXTMEM 0x100000 // Start of extended memory
-#define PHYSTOP 0xE000000 // Top physical memory
+#define P_ADDR_EXTMEM 0x100000 // Start of extended memory - 1MB
+#define P_ADDR_LOWMEM (P_ADDR_EXTMEM * 4) // Start of low memory - 4MB
+#define PHYSTOP 0xE000000 // Top physical memory - 28MB
 #define DEVSPACE 0xFE000000 // Other devices are at high addresses
 
 // Key addresses for address space layout (see kmap in vm.c for layout)
-#define KERNBASE 0x80000000 // First kernel virtual address
-#define KERNLINK (KERNBASE + EXTMEM) // Address where kernel is linked
+#define K_ADDR_BASE 0xC0000000 // 内核空间的虚拟地址的起点 - 3GB
+#define K_ADDR_LOAD (K_ADDR_BASE + EXTMEM) // 内核加载的位置（虚拟地址）
 #define KSTACKSIZE 4096 // size of per-process kernel stack
 
-#define V2P(a) (((uint)(a)) - KERNBASE)
-#define P2V(a) ((void*)(((char*)(a)) + KERNBASE))
+#define K_V2P(a) (((paddr_t)(a)) - K_ADDR_BASE)
+#define K_P2V(a) ((void*)(((char*)(a)) + K_ADDR_BASE))
 
-#define V2P_WO(x) ((x)-KERNBASE) // same as V2P, but without casts
-#define P2V_WO(x) ((x) + KERNBASE) // same as P2V, but without casts
+#define K_V2P_WO(x) ((x)-K_ADDR_BASE) // same as V2P, but without casts
+#define K_P2V_WO(x) ((x) + K_ADDR_BASE) // same as P2V, but without casts
+
+#define PGROUNDUP(a) (((a) + PGSIZE - 1) & ~(PGSIZE - 1)) // 向上舍入至下一个页的起始地址
+#define PGROUNDDOWN(a) (((a)) & ~(PGSIZE - 1)) // 向下舍入至本页的起始地址
 
 #ifndef __ASSEMBLER__
-
-typedef uint32_t pte_t;
-typedef uint32_t pde_t;
 
 #endif /* !__ASSEMBLER__ */
 
@@ -247,7 +248,7 @@ typedef uint32_t pde_t;
 
 #else // not __ASSEMBLER__
 
-#include <stdint.h>
+#include "types.h"
 
 // Segment Descriptors
 struct Segdesc {

@@ -5,10 +5,7 @@
 #include "inc/mmu.h"
 #include "inc/types.h"
 
-int main()
-{
-    kmem_init();
-}
+extern pde_t* kernel_pgdir;
 
 pde_t entry_pgdir[];
 /**
@@ -23,3 +20,8 @@ pde_t entry_pgdir[NPDENTRIES]
               PDXSHIFT]
           = (0) | PTE_P | PTE_W | PTE_PS,
       };
+
+int main()
+{
+    kmem_init(); // 内存管理初始化
+}

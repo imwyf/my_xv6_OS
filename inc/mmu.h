@@ -83,13 +83,13 @@
 
 #define P_ADDR_EXTMEM 0x100000 // Start of extended memory - 1MB
 #define P_ADDR_LOWMEM (P_ADDR_EXTMEM * 4) // Start of low memory - 4MB
-#define PHYSTOP 0xE000000 // Top physical memory - 28MB
-#define DEVSPACE 0xFE000000 // Other devices are at high addresses
+#define P_ADDR_PHYSTOP 0xE000000 // Top physical memory - 128MB
+#define P_ADDR_DEVSPACE 0xFE000000 // Other devices are at high addresses
 
 // Key addresses for address space layout (see kmap in vm.c for layout)
 #define K_ADDR_BASE 0xC0000000 // 内核空间的虚拟地址的起点 - 3GB
-#define K_ADDR_LOAD (K_ADDR_BASE + EXTMEM) // 内核加载的位置（虚拟地址）
-#define KSTACKSIZE 4096 // size of per-process kernel stack
+#define K_ADDR_LOAD (K_ADDR_BASE + P_ADDR_EXTMEM) // 内核加载的位置（虚拟地址）
+#define K_STACKSIZE 4096 // size of per-process kernel stack
 
 #define K_V2P(a) (((paddr_t)(a)) - K_ADDR_BASE)
 #define K_P2V(a) ((void*)(((char*)(a)) + K_ADDR_BASE))

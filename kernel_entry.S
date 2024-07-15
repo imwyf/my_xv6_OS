@@ -25,10 +25,10 @@ kernel_entry:
 # entrypgdir 直接将虚拟地址前4Mb映射到物理地址前4Mb
 
 # 现在的栈是bootloader设置的不处在内核中，因此把栈设为内核栈
-  movl $(stack + KSTACKSIZE), %esp
+  movl $(stack + K_STACKSIZE), %esp
 
 # 不能用 call，其使用的是相对寻址，所以 eip 仍然会在低地址处偏移来寻址，而此时 eip 指向的是低的虚拟地址，因此通过 jmp 重置 eip 以指向高地址处
   mov $main, %eax
   jmp *%eax
 
-.comm stack, KSTACKSIZE
+.comm stack, K_STACKSIZE

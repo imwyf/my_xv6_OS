@@ -97,125 +97,110 @@ char* kmem_alloc(void)
 
 /* ********************************************** 设置页表 ******************************************** */
 
-// There is one page table per process, plus one that's used when
-// a CPU is not running any process (kpgdir). The kernel uses the
-// current process's page table during system calls and interrupts;
-// page protection bits prevent user code from using the kernel's
-// mappings.
-//
-// setupkvm() and exec() set up every page table like this:
-//
-//   0..KERNBASE: user memory (text+data+stack+heap), mapped to
-//                phys memory allocated by the kernel
-//   KERNBASE..KERNBASE+EXTMEM: mapped to 0..EXTMEM (for I/O space)
-//   KERNBASE+EXTMEM..data: mapped to EXTMEM..V2P(data)
-//                for the kernel's instructions and r/o data
-//   data..KERNBASE+PHYSTOP: mapped to V2P(data)..PHYSTOP,
-//                                  rw data + free physical memory
-//   0xfe000000..0: mapped direct (devices such as ioapic)
-//
-// The kernel allocates physical memory for its heap and for user memory
-// between V2P(end) and the end of physical memory (PHYSTOP)
-// (directly addressable from end..P2V(PHYSTOP)).
-
-// This table defines the kernel's mappings, which are present in
-// every process's page table.
-
 /* 接下来还是声明设置内核页表的函数 */
-void freevm(pde_t* pgdir);
-static int kmmap(pde_t* pgdir, void* va, uint32_t size, uint32_t pa, int perm);
-static pte_t* walkpgdir(pde_t* pgdir, const void* va, int alloc);
+
+void free_pgdir(pde_t* pgdir);
+static int kmmap(pde_t* pgdir, void* vaddr, uint32_t size, paddr_t paddr, int perm);
+static pte_t* get_pte(pde_t* pgdir, const void* va, int alloc);
+int deallocuvm(pde_t* pgdir, uint32_t oldsz, uint32_t newsz);
 
 pde_t* set_kernel_pgdir(void)
 {
     pde_t* kernel_pgdir;
 
-    if ((kernel_pgdir = (pde_t*)kmem_alloc()) == 0)
+    if ((kernel_pgdir = (pde_t*)kmem_alloc()) == 0) // 分配一页内存作为一级页表页（即页目录）
         return 0;
     memset(kernel_pgdir, 0, PGSIZE);
     // if (K_P2V(PHYSTOP) > (void*)DEVSPACE)
     //     panic("PHYSTOP too high");
-    if (kmmap(kernel_pgdir, (void*)K_ADDR_BASE, P_ADDR_EXTMEM - 0, (paddr_t)0, PTE_W) < 0) {
-        freevm(kernel_pgdir);
+    /* 以下内存映射可以参照 memlayout.h 中的图理解 */
+    if (kmmap(kernel_pgdir, (void*)K_ADDR_BASE, P_ADDR_EXTMEM - 0, (paddr_t)0, PTE_W) < 0) { // 映射低1MB内存
+        free_pgdir(kernel_pgdir);
         return 0;
     }
-    if (kmmap(kernel_pgdir, (void*)K_ADDR_LOAD, K_V2P(data) - K_V2P(K_ADDR_LOAD), K_V2P(K_ADDR_LOAD), 0) < 0) {
-        freevm(kernel_pgdir);
+    if (kmmap(kernel_pgdir, (void*)K_ADDR_LOAD, K_V2P(data) - (paddr_t)P_ADDR_EXTMEM, (paddr_t)P_ADDR_EXTMEM, 0) < 0) { // 映射内核代码段和数据段占据的内存
+        free_pgdir(kernel_pgdir);
         return 0;
     }
-    if (kmmap(kernel_pgdir, (void*)data, P_ADDR_PHYSTOP - K_V2P(data), K_V2P(data), PTE_W) < 0) {
-        freevm(kernel_pgdir);
+    if (kmmap(kernel_pgdir, (void*)data, P_ADDR_PHYSTOP - K_V2P(data), K_V2P(data), PTE_W) < 0) { // 映射内核数据段后面的内存
+        free_pgdir(kernel_pgdir);
         return 0;
     }
-    if (kmmap(kernel_pgdir, (void*)P_ADDR_DEVSPACE, 0 - P_ADDR_DEVSPACE, P_ADDR_DEVSPACE, PTE_W) < 0) {
-        freevm(kernel_pgdir);
+    if (kmmap(kernel_pgdir, (void*)P_ADDR_DEVSPACE, 0 - P_ADDR_DEVSPACE, (paddr_t)P_ADDR_DEVSPACE, PTE_W) < 0) { // 映射设备内存（直接映射）
+        free_pgdir(kernel_pgdir);
         return 0;
     }
     return kernel_pgdir;
 }
-// Create PTEs for virtual addresses starting at va that refer to
-// physical addresses starting at pa. va and size might not
-// be page-aligned.
-static int kmmap(pde_t* pgdir, void* va, uint32_t size, paddr_t pa, int perm)
+
+/**
+ * 在页表pgdir中进行虚拟内存到物理内存的映射：虚拟地址vaddr -> 物理地址paddr，映射长度为size，权限为perm，成功返回0，不成功返回-1
+ */
+static int kmmap(pde_t* pgdir, void* vaddr, uint32_t size, paddr_t paddr, int perm)
 {
-    char *a, *last;
+    char *va_start, *va_end;
     pte_t* pte;
 
-    a = (char*)PGROUNDDOWN((uint32_t)va);
-    last = (char*)PGROUNDDOWN(((uint32_t)va) + size - 1);
-    for (;;) {
-        if ((pte = walkpgdir(pgdir, a, 1)) == 0)
+    // if (size == 0)
+    //     panic("mappages: size = 0");
+
+    /* 先对齐，并求出需要映射的虚拟地址范围 */
+    va_start = (char*)PGROUNDDOWN((vaddr_t)vaddr);
+    va_end = (char*)PGROUNDDOWN(((vaddr_t)vaddr) + size - 1);
+    /* 对于其中每一页，调用 get_pte 找到所需的页表项，然后将此虚拟页对应的物理地址、权限位填入相应的页表项 pte */
+    while (va_start < va_end) {
+        if ((pte = get_pte(pgdir, va_start, 1)) == 0) // 找到 pte
             return -1;
         // if (*pte & PTE_P)
         //     panic("remap");
-        *pte = pa | perm | PTE_P;
-        if (a == last)
-            break;
-        a += PGSIZE;
-        pa += PGSIZE;
+        *pte = paddr | perm | PTE_P; // 填写 pte
+        va_start += PGSIZE;
+        paddr += PGSIZE;
     }
     return 0;
 }
 
-// Free a page table and all the physical memory pages
-// in the user part.
-void freevm(pde_t* pgdir)
+/**
+ * 释放页表pgdir，以及其映射的所有物理内存
+ */
+void free_pgdir(pde_t* pgdir)
 {
     uint32_t i;
 
-    if (pgdir == 0)
-        panic("freevm: no pgdir");
-    deallocuvm(pgdir, KERNBASE, 0);
+    // if (pgdir == 0)
+    //     panic("freevm: no pgdir");
+    deallocuvm(pgdir, K_ADDR_BASE, 0);
+    /* 释放页表 */
     for (i = 0; i < NPDENTRIES; i++) {
         if (pgdir[i] & PTE_P) {
-            char* v = P2V(PTE_ADDR(pgdir[i]));
-            kfree(v);
+            char* v = K_P2V(PTE_ADDR(pgdir[i]));
+            kmem_free(v);
         }
     }
-    kfree((char*)pgdir);
+    kmem_free((char*)pgdir); // 释放页表
 }
 
 // Return the address of the PTE in page table pgdir
 // that corresponds to virtual address va.  If alloc!=0,
 // create any required page table pages.
 static pte_t*
-walkpgdir(pde_t* pgdir, const void* va, int alloc)
+get_pte(pde_t* pgdir, const void* va, int alloc)
 {
     pde_t* pde;
     pte_t* pgtab;
 
     pde = &pgdir[PDX(va)];
     if (*pde & PTE_P) {
-        pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
+        pgtab = (pte_t*)K_P2V(PTE_ADDR(*pde));
     } else {
-        if (!alloc || (pgtab = (pte_t*)kalloc()) == 0)
+        if (!alloc || (pgtab = (pte_t*)kmem_alloc()) == 0)
             return 0;
         // Make sure all those PTE_P bits are zero.
         memset(pgtab, 0, PGSIZE);
         // The permissions here are overly generous, but they can
         // be further restricted by the permissions in the page table
         // entries, if necessary.
-        *pde = V2P(pgtab) | PTE_P | PTE_W | PTE_U;
+        *pde = K_V2P(pgtab) | PTE_P | PTE_W | PTE_U;
     }
     return &pgtab[PTX(va)];
 }
@@ -234,15 +219,15 @@ int deallocuvm(pde_t* pgdir, uint32_t oldsz, uint32_t newsz)
 
     a = PGROUNDUP(newsz);
     for (; a < oldsz; a += PGSIZE) {
-        pte = walkpgdir(pgdir, (char*)a, 0);
+        pte = get_pte(pgdir, (char*)a, 0);
         if (!pte)
             a = PGADDR(PDX(a) + 1, 0, 0) - PGSIZE;
         else if ((*pte & PTE_P) != 0) {
             pa = PTE_ADDR(*pte);
-            if (pa == 0)
-                panic("kfree");
-            char* v = P2V(pa);
-            kfree(v);
+            // if (pa == 0)
+            //     panic("kfree");
+            char* v = K_P2V(pa);
+            kmem_free(v);
             *pte = 0;
         }
     }

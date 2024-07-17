@@ -2,7 +2,7 @@
  * kernel_mem.c - 负责内存分配、地址映射、页表建立等初始化工作
  *************************************************************************/
 // TODO:加锁
-#include "inc/mmu.h"
+#include "inc/mem.h"
 #include "inc/proc.h"
 #include "inc/types.h"
 #include <inc/lib.h>
@@ -196,7 +196,7 @@ void free_pgdir(struct proc* p)
 {
     // if (p->pgdir == 0)
     //     panic("freevm: no pgdir");
-    deallocuvm(p->pgdir, K_ADDR_BASE, 0); // 将 0 到 K_ADDR_BASE 的虚拟地址空间回收
+    // deallocuvm(p->pgdir, K_ADDR_BASE, 0); // 将 0 到 K_ADDR_BASE 的虚拟地址空间回收
     /* 释放二级页表占据的空间 */
     for (int i = 0; i < NPDENTRIES; i++) {
         if (p->pgdir[i] & PTE_P) {
@@ -228,31 +228,31 @@ static pte_t* get_pte(pde_t* pgdir, const void* vaddr, int need_alloc, int perm)
     return &pte[PTX(vaddr)]; // 从二级页表中取出对应的页表项
 }
 
-// Deallocate user pages to bring the process size from oldsz to
-// newsz.  oldsz and newsz need not be page-aligned, nor does newsz
-// need to be less than oldsz.  oldsz can be larger than the actual
-// process size.  Returns the new process size.
-int deallocuvm(pde_t* pgdir, uint32_t oldsz, uint32_t newsz)
-{
-    pte_t* pte;
-    uint32_t a, pa;
+// // Deallocate user pages to bring the process size from oldsz to
+// // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
+// // need to be less than oldsz.  oldsz can be larger than the actual
+// // process size.  Returns the new process size.
+// int deallocuvm(pde_t* pgdir, uint32_t oldsz, uint32_t newsz)
+// {
+//     pte_t* pte;
+//     uint32_t a, pa;
 
-    if (newsz >= oldsz)
-        return oldsz;
+//     if (newsz >= oldsz)
+//         return oldsz;
 
-    a = PGROUNDUP(newsz);
-    for (; a < oldsz; a += PGSIZE) {
-        pte = get_pte(pgdir, (char*)a, 0);
-        if (!pte)
-            a = PGADDR(PDX(a) + 1, 0, 0) - PGSIZE;
-        else if ((*pte & PTE_P) != 0) {
-            pa = PTE_ADDR(*pte);
-            // if (pa == 0)
-            //     panic("kfree");
-            char* v = K_P2V(pa);
-            kmem_free(v);
-            *pte = 0;
-        }
-    }
-    return newsz;
-}
+//     a = PGROUNDUP(newsz);
+//     for (; a < oldsz; a += PGSIZE) {
+//         pte = get_pte(pgdir, (char*)a, 0);
+//         if (!pte)
+//             a = PGADDR(PDX(a) + 1, 0, 0) - PGSIZE;
+//         else if ((*pte & PTE_P) != 0) {
+//             pa = PTE_ADDR(*pte);
+//             // if (pa == 0)
+//             //     panic("kfree");
+//             char* v = K_P2V(pa);
+//             kmem_free(v);
+//             *pte = 0;
+//         }
+//     }
+//     return newsz;
+// }

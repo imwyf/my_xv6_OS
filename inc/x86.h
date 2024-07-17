@@ -3,6 +3,7 @@
 
 #include "types.h"
 
+
 static inline void
 hlt(void)
 {

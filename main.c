@@ -2,7 +2,7 @@
  * main.c - 负责内核的各项功能的初始化
  *************************************************************************/
 #include "inc/kernel.h"
-#include "inc/mmu.h"
+#include "inc/mem.h"
 #include "inc/types.h"
 
 extern pde_t* kernel_pgdir;
@@ -24,5 +24,4 @@ pde_t entry_pgdir[NPDENTRIES]
 int main()
 {
     kmem_init(); // 内存管理初始化
-    
 }

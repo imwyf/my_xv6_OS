@@ -2,7 +2,8 @@
 # * kernel_entry.S - 内核的入口，负责开启分页机制，然后跳到 main 以实现系统初始化
 # *************************************************************************
 
-#include <inc/mmu.h>
+#include <inc/mem.h>
+#include <inc/cpu.h>
 
 .text
 .globl _start

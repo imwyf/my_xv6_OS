@@ -1,4 +1,11 @@
-// Control Register flags
+#ifndef _CPU_H_
+#define _CPU_H_
+
+/*************************************************************************
+ * cpu.h - 定义一些 cpu 中的寄存器相关的值
+ *************************************************************************/
+
+/* 下面是两个控制寄存器的值 */
 #define CR0_PE 0x00000001 // Protection Enable
 #define CR0_MP 0x00000002 // Monitor coProcessor
 #define CR0_EM 0x00000004 // Emulation
@@ -41,3 +48,5 @@
 #define FL_VIF 0x00080000 // Virtual Interrupt Flag
 #define FL_VIP 0x00100000 // Virtual Interrupt Pending
 #define FL_ID 0x00200000 // ID flag
+
+#endif /* !_CPU_H_ */

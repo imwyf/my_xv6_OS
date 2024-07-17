@@ -12,32 +12,41 @@ ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
 LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null | head -n 1)
 GCC_LIB := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
 
-OBJS = \
-	main.o\
-	kernel_mem.o
+SRCDIR = ./src
+OBJDIR = ./obj
+INCDIR = ./inc
+
+# 源文件列表
+SRCS = \
+	kernel_entry.S\
+	main.c\
+	kernel_mem.c\
+	lib.c
+
+# 待链接的 obj 文件列表
+OBJS = $(addprefix $(OBJDIR)/, $(addsuffix .o, $(basename $(SRCS))))
 
 myos.img: bootloader kernel
-	dd if=/dev/zero of=myos.img count=10000
-	dd if=bootloader of=myos.img conv=notrunc
-	dd if=kernel of=myos.img seek=2 conv=notrunc
+	dd if=/dev/zero of=$(OBJDIR)/myos.img count=10000
+	dd if=$(OBJDIR)/bootloader of=$(OBJDIR)/myos.img conv=notrunc
+	dd if=$(OBJDIR)/kernel of=$(OBJDIR)/myos.img seek=2 conv=notrunc
 
-bootloader: boot.S loader.c
-	$(CC) $(CFLAGS) -c loader.c
-	$(CC) $(CFLAGS) -c boot.S
-	$(LD) $(LDFLAGS) -N -e start -Ttext 0x7C00 -o bootloader.out boot.o loader.o
-	$(OBJDUMP) -S bootloader.out > bootloader.asm
-	$(OBJCOPY) -S -O binary -j .text bootloader.out bootloader
+bootloader:
+	$(CC) $(CFLAGS) -c $(SRCDIR)/loader.c -o $(OBJDIR)/loader.o
+	$(CC) $(CFLAGS) -c $(SRCDIR)/boot.S -o $(OBJDIR)/boot.o
+	$(LD) $(LDFLAGS) -N -e start -Ttext 0x7C00 -o $(OBJDIR)/bootloader.o $(OBJDIR)/boot.o $(OBJDIR)/loader.o
+	$(OBJDUMP) -S $(OBJDIR)/bootloader.o > $(OBJDIR)/bootloader.asm
+	$(OBJCOPY) -S -O binary -j .text $(OBJDIR)/bootloader.o $(OBJDIR)/bootloader
 
-kernel: kernel_entry $(OBJS)
-	$(LD) $(LDFLAGS) -T kernel.ld -o kernel kernel_entry.o $(OBJS) $(GCC_LIB)
-	$(OBJDUMP) -S kernel > kernel.asm
-	$(OBJDUMP) -t kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
+kernel: $(SRCS)
+	$(LD) $(LDFLAGS) -T $(SRCDIR)/kernel.ld -o $(OBJDIR)/kernel $(OBJS)
+	$(OBJDUMP) -S $(OBJDIR)/kernel > $(OBJDIR)/kernel.asm
+	$(OBJDUMP) -t $(OBJDIR)/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $(OBJDIR)/kernel.sym
 
-kernel_entry:
-	$(CC) $(CFLAGS) -c kernel_entry.S
+# 编译每一个 .S 和 .c 文件
+$(SRCS):
+	$(CC) $(CFLAGS) -c $(SRCDIR)/$@ -o $(addprefix $(OBJDIR)/, $(addsuffix .o, $(basename $@)))
 
-$(OBJS): %.o: %.c
-	$(CC) $(CFLAGS) -c $<
 
 ifndef QEMU
 QEMU = $(shell if which qemu > /dev/null; \
@@ -67,7 +76,7 @@ ifndef CPUS
 CPUS := 2
 endif
 
-QEMUOPTS = -drive file=myos.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512 -nographic
+QEMUOPTS = -drive file=$(OBJDIR)/myos.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512 -nographic
 
 qemu: clean myos.img
 	$(QEMU) -serial mon:stdio $(QEMUOPTS)
@@ -80,6 +89,6 @@ qemu-gdb: clean myos.img .gdbinit
 	$(QEMU) -serial mon:stdio $(QEMUOPTS) -S $(QEMUGDB)
 
 clean:
-	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
+	rm -f ./obj/* *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
 	*.o *.d *.asm *.sym *.out bootloader kernel myos.img .gdbinit
 

@@ -1,5 +1,9 @@
-#ifndef _INC_MMU_H_
-#define _INC_MMU_H_
+#ifndef _MMU_H_
+#define _MMU_H_
+
+/*************************************************************************
+ * mem.h - 定义有关于物理/虚拟内存相关的值和结构
+ *************************************************************************/
 
 #ifndef __ASSEMBLER__
 #include "types.h"
@@ -176,8 +180,6 @@
 #define PTE_SYSCALL (PTE_AVAIL | PTE_P | PTE_W | PTE_U)
 
 #define PTE_ADDR(pde) ((paddr_t)(pde) & ~0xFFF) // 根据页表项中的 PPN 得到其对应的物理地址
-
-
 
 // Page fault error codes
 #define FEC_PR 0x1 // Page fault caused by protection violation
@@ -383,4 +385,4 @@ struct Pseudodesc {
 
 #endif /* !__ASSEMBLER__ */
 
-#endif /* !_INC_MMU_H_ */
+#endif /* !_MMU_H_ */

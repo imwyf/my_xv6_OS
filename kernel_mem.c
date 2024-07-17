@@ -3,6 +3,7 @@
  *************************************************************************/
 // TODO:加锁
 #include "inc/mmu.h"
+#include "inc/proc.h"
 #include "inc/types.h"
 #include <inc/lib.h>
 // #include "inc/lock.h"
@@ -17,6 +18,7 @@ pde_t* kernel_pgdir; // 内核页表(一级页表的基址)
 void kmem_free_pages(void* start, void* end);
 void kmem_free(char* v);
 pde_t* set_kernel_pgdir(void);
+void switch_pgdir(struct proc* p);
 
 /**
  * 初始化内存分配器、页表
@@ -28,7 +30,7 @@ void kmem_init()
     memset(edata, 0, end - edata); // 初始化数据段保证静态变量初始化为0
     kmem_free_pages(end, K_P2V(P_ADDR_LOWMEM)); // 释放[end, 4MB]部分给新的内核页表使用
     kernel_pgdir = set_kernel_pgdir(); // 设置内核页表
-    switch_to_kernel_pgdir();
+    switch_pgdir(NULL); // NULL 代表切换为内核页表
 }
 
 void kinit2(void* vstart, void* vend)
@@ -79,11 +81,11 @@ void kmem_free(char* vaddr)
 }
 
 /**
- * 分配一页内存，返回指向内存的指针
+ * 分配一页内存，返回指向内存的指针，失败返回NULL
  */
 char* kmem_alloc(void)
 {
-    struct list_node* node;
+    struct list_node* node = NULL;
 
     // if (kmem.use_lock)
     //     acquire(&kmem.lock);
@@ -99,11 +101,14 @@ char* kmem_alloc(void)
 
 /* 接下来还是声明设置内核页表的函数 */
 
-void free_pgdir(pde_t* pgdir);
+void free_pgdir(struct proc* p);
 static int kmmap(pde_t* pgdir, void* vaddr, uint32_t size, paddr_t paddr, int perm);
-static pte_t* get_pte(pde_t* pgdir, const void* va, int alloc);
+static pte_t* get_pte(pde_t* pgdir, const void* va, int alloc, int perm);
 int deallocuvm(pde_t* pgdir, uint32_t oldsz, uint32_t newsz);
 
+/**
+ * 设置内核页表：先分配一页内存作为一级页表页（即页目录），然后在页表中映射 K_ADDR_BASE 之上的虚拟内核
+ */
 pde_t* set_kernel_pgdir(void)
 {
     pde_t* kernel_pgdir;
@@ -115,26 +120,50 @@ pde_t* set_kernel_pgdir(void)
     //     panic("PHYSTOP too high");
     /* 以下内存映射可以参照 memlayout.h 中的图理解 */
     if (kmmap(kernel_pgdir, (void*)K_ADDR_BASE, P_ADDR_EXTMEM - 0, (paddr_t)0, PTE_W) < 0) { // 映射低1MB内存
-        free_pgdir(kernel_pgdir);
-        return 0;
+        goto bad;
     }
     if (kmmap(kernel_pgdir, (void*)K_ADDR_LOAD, K_V2P(data) - (paddr_t)P_ADDR_EXTMEM, (paddr_t)P_ADDR_EXTMEM, 0) < 0) { // 映射内核代码段和数据段占据的内存
-        free_pgdir(kernel_pgdir);
-        return 0;
+        goto bad;
     }
     if (kmmap(kernel_pgdir, (void*)data, P_ADDR_PHYSTOP - K_V2P(data), K_V2P(data), PTE_W) < 0) { // 映射内核数据段后面的内存
-        free_pgdir(kernel_pgdir);
-        return 0;
+        goto bad;
     }
     if (kmmap(kernel_pgdir, (void*)P_ADDR_DEVSPACE, 0 - P_ADDR_DEVSPACE, (paddr_t)P_ADDR_DEVSPACE, PTE_W) < 0) { // 映射设备内存（直接映射）
-        free_pgdir(kernel_pgdir);
-        return 0;
+        goto bad;
     }
     return kernel_pgdir;
+
+bad:
+    kmem_free((char*)kernel_pgdir);
+    return 0;
 }
 
 /**
- * 在页表pgdir中进行虚拟内存到物理内存的映射：虚拟地址vaddr -> 物理地址paddr，映射长度为size，权限为perm，成功返回0，不成功返回-1
+ * 切换页表为进程 p 的页表，当 p 为 NULL 时切换回内核页表
+ */
+void switch_pgdir(struct proc* p)
+{
+    if (p == NULL) {
+        lcr3(K_V2P(kernel_pgdir));
+    } else {
+        // pushcli();
+        // cpu->gdt[SEG_TSS] = SEG16(STS_T32A, &cpu->ts, sizeof(cpu->ts) - 1, 0);
+        // cpu->gdt[SEG_TSS].s = 0;
+        // cpu->ts.ss0 = SEG_KDATA << 3;
+        // cpu->ts.esp0 = (uint)proc->kstack + KSTACKSIZE;
+        // // setting IOPL=0 in eflags *and* iomb beyond the tss segment limit
+        // // forbids I/O instructions (e.g., inb and outb) from user space
+        // cpu->ts.iomb = (ushort)0xFFFF;
+        // ltr(SEG_TSS << 3);
+        // if (p->pgdir == 0)
+        //     panic("switchuvm: no pgdir");
+        // lcr3(K_V2P(p->pgdir)); // switch to process's address space
+        // popcli();
+    }
+}
+
+/**
+ * 在页表 pgdir 中进行虚拟内存到物理内存的映射：虚拟地址 vaddr -> 物理地址 paddr，映射长度为 size，权限为 perm，成功返回0，不成功返回-1
  */
 static int kmmap(pde_t* pgdir, void* vaddr, uint32_t size, paddr_t paddr, int perm)
 {
@@ -149,7 +178,7 @@ static int kmmap(pde_t* pgdir, void* vaddr, uint32_t size, paddr_t paddr, int pe
     va_end = (char*)PGROUNDDOWN(((vaddr_t)vaddr) + size - 1);
     /* 对于其中每一页，调用 get_pte 找到所需的页表项，然后将此虚拟页对应的物理地址、权限位填入相应的页表项 pte */
     while (va_start < va_end) {
-        if ((pte = get_pte(pgdir, va_start, 1)) == 0) // 找到 pte
+        if ((pte = get_pte(pgdir, va_start, 1, perm)) == NULL) // 找到 pte
             return -1;
         // if (*pte & PTE_P)
         //     panic("remap");
@@ -161,48 +190,42 @@ static int kmmap(pde_t* pgdir, void* vaddr, uint32_t size, paddr_t paddr, int pe
 }
 
 /**
- * 释放页表pgdir，以及其映射的所有物理内存
+ * 释放进程 p 的页表，以及其映射的所有物理内存
  */
-void free_pgdir(pde_t* pgdir)
+void free_pgdir(struct proc* p)
 {
-    uint32_t i;
-
-    // if (pgdir == 0)
+    // if (p->pgdir == 0)
     //     panic("freevm: no pgdir");
-    deallocuvm(pgdir, K_ADDR_BASE, 0);
-    /* 释放页表 */
-    for (i = 0; i < NPDENTRIES; i++) {
-        if (pgdir[i] & PTE_P) {
-            char* v = K_P2V(PTE_ADDR(pgdir[i]));
+    deallocuvm(p->pgdir, K_ADDR_BASE, 0); // 将 0 到 K_ADDR_BASE 的虚拟地址空间回收
+    /* 释放二级页表占据的空间 */
+    for (int i = 0; i < NPDENTRIES; i++) {
+        if (p->pgdir[i] & PTE_P) {
+            char* v = K_P2V(PTE_ADDR(p->pgdir[i]));
             kmem_free(v);
         }
     }
-    kmem_free((char*)pgdir); // 释放页表
+    kmem_free((char*)p->pgdir); // 释放页目录
 }
 
-// Return the address of the PTE in page table pgdir
-// that corresponds to virtual address va.  If alloc!=0,
-// create any required page table pages.
-static pte_t*
-get_pte(pde_t* pgdir, const void* va, int alloc)
+/**
+ * 在页表 pgdir 中查找虚拟地址 vaddr 对应的页表项，如果 need_alloc 为 1 且页目录项不存在，则分配一个二级页表，权限位perm，成功返回页表项指针，不成功返回 NULL
+ */
+static pte_t* get_pte(pde_t* pgdir, const void* vaddr, int need_alloc, int perm)
 {
-    pde_t* pde;
-    pte_t* pgtab;
+    pde_t* pde; // 页目录项（一级）
+    pte_t* pte; // 页表项（二级）
 
-    pde = &pgdir[PDX(va)];
-    if (*pde & PTE_P) {
-        pgtab = (pte_t*)K_P2V(PTE_ADDR(*pde));
+    pde = &pgdir[PDX(vaddr)]; // 根据 vaddr 获取对应的页目录项
+    if (*pde & PTE_P) { // 页目录项存在
+        pte = (pte_t*)K_P2V(PTE_ADDR(*pde)); // 取出 PPN 所对应的二级页表（即 pte 数组）的地址
     } else {
-        if (!alloc || (pgtab = (pte_t*)kmem_alloc()) == 0)
-            return 0;
-        // Make sure all those PTE_P bits are zero.
-        memset(pgtab, 0, PGSIZE);
-        // The permissions here are overly generous, but they can
-        // be further restricted by the permissions in the page table
-        // entries, if necessary.
-        *pde = K_V2P(pgtab) | PTE_P | PTE_W | PTE_U;
+        if (!need_alloc || (pte = (pte_t*)kmem_alloc()) == NULL) // 不需要分配或分配失败
+            return NULL;
+
+        memset(pte, 0, PGSIZE);
+        *pde = K_V2P(pte) | perm | PTE_P; // 将二级页表的物理地址写入页目录项
     }
-    return &pgtab[PTX(va)];
+    return &pte[PTX(vaddr)]; // 从二级页表中取出对应的页表项
 }
 
 // Deallocate user pages to bring the process size from oldsz to

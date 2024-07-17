@@ -158,7 +158,7 @@
 #define PDXSHIFT 22 // offset of PDX in a linear address
 
 /* 页表项的标志位 */
-#define PTE_P 0x001 // Present
+#define PTE_P 0x001 // 存在
 #define PTE_W 0x002 // 可写
 #define PTE_U 0x004 // 用户可以访问
 #define PTE_PWT 0x008 // Write-Through
@@ -175,8 +175,7 @@
 // Flags in PTE_SYSCALL may be used in system calls.  (Others may not.)
 #define PTE_SYSCALL (PTE_AVAIL | PTE_P | PTE_W | PTE_U)
 
-// Address in page table or page directory entry
-#define PTE_ADDR(pte) ((paddr_t)(pte) & ~0xFFF)
+#define PTE_ADDR(pde) ((paddr_t)(pde) & ~0xFFF) // 根据页表项中的 PPN 得到其对应的物理地址
 
 // Control Register flags
 #define CR0_PE 0x00000001 // Protection Enable

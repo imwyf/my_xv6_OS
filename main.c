@@ -24,4 +24,5 @@ pde_t entry_pgdir[NPDENTRIES]
 int main()
 {
     kmem_init(); // 内存管理初始化
+    
 }

@@ -8,4 +8,7 @@
 /* kernel_mem.c */
 void kmem_init();
 
+/* mcpu.c */
+void mcpu_init();
+
 #endif /* !_I_KERNEL_H_ */

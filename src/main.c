@@ -30,6 +30,7 @@ int main()
     cprintf("------> Hello, OS World!\n");
     kmem_init(); // 内存管理初始化
     cprintf("------> kmem_init() finish!\n");
-    
+    mcpu_init();
+    cprintf("------> mcpu_init() finish!\n");
     hlt();
 }

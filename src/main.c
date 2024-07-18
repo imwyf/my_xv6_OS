@@ -1,7 +1,9 @@
 /*************************************************************************
  * main.c - 负责内核的各项功能的初始化
  *************************************************************************/
+#include "inc/i_asm.h"
 #include "inc/i_kernel.h"
+#include "inc/i_lib.h"
 #include "inc/mem.h"
 #include "inc/types.h"
 
@@ -23,5 +25,11 @@ pde_t entry_pgdir[NPDENTRIES]
 
 int main()
 {
+    cons_init();
+    cprintf("\n");
+    cprintf("------> Hello, OS World!\n");
     kmem_init(); // 内存管理初始化
+    cprintf("------> kmem_init() finish!\n");
+    
+    hlt();
 }

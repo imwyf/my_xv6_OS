@@ -91,7 +91,7 @@
 #define P_ADDR_DEVSPACE 0xFE000000 // Other devices are at high addresses
 
 // Key addresses for address space layout (see kmap in vm.c for layout)
-#define K_ADDR_BASE 0xC0000000 // 内核空间的虚拟地址的起点 - 3GB
+#define K_ADDR_BASE 0x80000000 // 内核空间的虚拟地址的起点 - 3GB
 #define K_ADDR_LOAD (K_ADDR_BASE + P_ADDR_EXTMEM) // 内核加载的位置（虚拟地址）
 #define K_STACKSIZE 4096 // size of per-process kernel stack
 

@@ -9,9 +9,9 @@
 #include <inc/i_lib.h>
 // #include "inc/lock.h"
 
-extern char* end; // 内核的 ELF 文件结束后的第一个虚拟地址，定义于 kernel.ld
-extern char* edata; // 数据段结尾
-extern char* data; // 数据段开始
+extern char end[]; // 内核的 ELF 文件结束后的第一个虚拟地址，定义于 kernel.ld
+extern char edata[]; // 数据段结尾
+extern char data[]; // 数据段开始
 
 pde_t* kernel_pgdir; // 内核页表(一级页表的基址)
 
@@ -28,16 +28,9 @@ void kmem_init()
 {
     // initlock(&kmem.lock, "kmem");
     // kmem.use_lock = 0;
-    memset(edata, 0, end - edata); // 初始化数据段保证静态变量初始化为0
     kmem_free_pages(end, K_P2V(P_ADDR_LOWMEM)); // 释放[end, 4MB]部分给新的内核页表使用
     kernel_pgdir = set_kernel_pgdir(); // 设置内核页表
     switch_pgdir(NULL); // NULL 代表切换为内核页表
-}
-
-void kinit2(void* vstart, void* vend)
-{
-    kmem_free_pages(vstart, vend);
-    // kmem.use_lock = 1;
 }
 
 /* ********************************************** 物理内存分配器 ******************************************** */
@@ -58,8 +51,11 @@ struct {
  */
 void kmem_free_pages(void* start, void* end)
 {
-    for (char* pg = (char*)PGROUNDUP((uint32_t)start); pg + PGSIZE <= (char*)end; pg += PGSIZE)
-        kmem_free(pg);
+    char* p;
+    p = (char*)PGROUNDUP((vaddr_t)start);
+    for (; p + PGSIZE <= (char*)end; p += PGSIZE) {
+        kmem_free(p);
+    }
 }
 
 /**
@@ -67,8 +63,8 @@ void kmem_free_pages(void* start, void* end)
  */
 void kmem_free(char* vaddr)
 {
-    // if ((uint32_t)v % PGSIZE || v < end || K_V2P(v) >= PHYSTOP)
-    //     // panic("kfree");
+    if ((vaddr_t)vaddr % PGSIZE || vaddr < end || K_V2P(vaddr) >= P_ADDR_PHYSTOP)
+        cprintf("kfree error \n");
 
     memset(vaddr, 1, PGSIZE); // 清空该页内存
 
@@ -105,7 +101,7 @@ char* kmem_alloc(void)
 void free_pgdir(struct proc* p);
 static int kmmap(pde_t* pgdir, void* vaddr, uint32_t size, paddr_t paddr, int perm);
 static pte_t* get_pte(pde_t* pgdir, const void* va, int alloc, int perm);
-int deallocuvm(pde_t* pgdir, uint32_t oldsz, uint32_t newsz);
+// int deallocuvm(pde_t* pgdir, uint32_t oldsz, uint32_t newsz);
 
 /**
  * 设置内核页表：先分配一页内存作为一级页表页（即页目录），然后在页表中映射 K_ADDR_BASE 之上的虚拟内核
@@ -117,13 +113,16 @@ pde_t* set_kernel_pgdir(void)
     if ((kernel_pgdir = (pde_t*)kmem_alloc()) == 0) // 分配一页内存作为一级页表页（即页目录）
         return 0;
     memset(kernel_pgdir, 0, PGSIZE);
-    // if (K_P2V(PHYSTOP) > (void*)DEVSPACE)
-    //     panic("PHYSTOP too high");
+    if (K_P2V(P_ADDR_PHYSTOP) > (void*)P_ADDR_DEVSPACE) // 检查物理内存是否足够
+    {
+        cprintf("PHYSTOP too high \n");
+        hlt();
+    }
     /* 以下内存映射可以参照 memlayout.h 中的图理解 */
     if (kmmap(kernel_pgdir, (void*)K_ADDR_BASE, P_ADDR_EXTMEM - 0, (paddr_t)0, PTE_W) < 0) { // 映射低1MB内存
         goto bad;
     }
-    if (kmmap(kernel_pgdir, (void*)K_ADDR_LOAD, K_V2P(data) - (paddr_t)P_ADDR_EXTMEM, (paddr_t)P_ADDR_EXTMEM, 0) < 0) { // 映射内核代码段和数据段占据的内存
+    if (kmmap(kernel_pgdir, (void*)K_ADDR_LOAD, K_V2P(data) - K_V2P(K_ADDR_LOAD), K_V2P(K_ADDR_LOAD), 0) < 0) { // 映射内核代码段和数据段占据的内存
         goto bad;
     }
     if (kmmap(kernel_pgdir, (void*)data, P_ADDR_PHYSTOP - K_V2P(data), K_V2P(data), PTE_W) < 0) { // 映射内核数据段后面的内存
@@ -151,7 +150,7 @@ void switch_pgdir(struct proc* p)
         // cpu->gdt[SEG_TSS] = SEG16(STS_T32A, &cpu->ts, sizeof(cpu->ts) - 1, 0);
         // cpu->gdt[SEG_TSS].s = 0;
         // cpu->ts.ss0 = SEG_KDATA << 3;
-        // cpu->ts.esp0 = (uint)proc->kstack + KSTACKSIZE;
+        // cpu->ts.esp0 = (uint32_t)proc->kstack + KSTACKSIZE;
         // // setting IOPL=0 in eflags *and* iomb beyond the tss segment limit
         // // forbids I/O instructions (e.g., inb and outb) from user space
         // cpu->ts.iomb = (ushort)0xFFFF;
@@ -171,19 +170,26 @@ static int kmmap(pde_t* pgdir, void* vaddr, uint32_t size, paddr_t paddr, int pe
     char *va_start, *va_end;
     pte_t* pte;
 
-    // if (size == 0)
-    //     panic("mappages: size = 0");
+    if (size == 0) {
+        cprintf("kmmap() error: size = 0, it should be > 0\n");
+        return -1;
+    }
 
     /* 先对齐，并求出需要映射的虚拟地址范围 */
     va_start = (char*)PGROUNDDOWN((vaddr_t)vaddr);
     va_end = (char*)PGROUNDDOWN(((vaddr_t)vaddr) + size - 1);
     /* 对于其中每一页，调用 get_pte 找到所需的页表项，然后将此虚拟页对应的物理地址、权限位填入相应的页表项 pte */
-    while (va_start < va_end) {
+    while (1) {
         if ((pte = get_pte(pgdir, va_start, 1, perm)) == NULL) // 找到 pte
             return -1;
-        // if (*pte & PTE_P)
-        //     panic("remap");
+
+        if (*pte & PTE_P) {
+            cprintf("kmmap error: pte already present\n");
+            return -1;
+        }
         *pte = paddr | perm | PTE_P; // 填写 pte
+        if (va_start == va_end) // 映射完成
+            break;
         va_start += PGSIZE;
         paddr += PGSIZE;
     }
@@ -229,31 +235,31 @@ static pte_t* get_pte(pde_t* pgdir, const void* vaddr, int need_alloc, int perm)
     return &pte[PTX(vaddr)]; // 从二级页表中取出对应的页表项
 }
 
-// // Deallocate user pages to bring the process size from oldsz to
-// // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
-// // need to be less than oldsz.  oldsz can be larger than the actual
-// // process size.  Returns the new process size.
-// int deallocuvm(pde_t* pgdir, uint32_t oldsz, uint32_t newsz)
-// {
-//     pte_t* pte;
-//     uint32_t a, pa;
+// // // Deallocate user pages to bring the process size from oldsz to
+// // // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
+// // // need to be less than oldsz.  oldsz can be larger than the actual
+// // // process size.  Returns the new process size.
+// // int deallocuvm(pde_t* pgdir, uint32_t oldsz, uint32_t newsz)
+// // {
+// //     pte_t* pte;
+// //     uint32_t a, pa;
 
-//     if (newsz >= oldsz)
-//         return oldsz;
+// //     if (newsz >= oldsz)
+// //         return oldsz;
 
-//     a = PGROUNDUP(newsz);
-//     for (; a < oldsz; a += PGSIZE) {
-//         pte = get_pte(pgdir, (char*)a, 0);
-//         if (!pte)
-//             a = PGADDR(PDX(a) + 1, 0, 0) - PGSIZE;
-//         else if ((*pte & PTE_P) != 0) {
-//             pa = PTE_ADDR(*pte);
-//             // if (pa == 0)
-//             //     panic("kfree");
-//             char* v = K_P2V(pa);
-//             kmem_free(v);
-//             *pte = 0;
-//         }
-//     }
-//     return newsz;
-// }
+// //     a = PGROUNDUP(newsz);
+// //     for (; a < oldsz; a += PGSIZE) {
+// //         pte = get_pte(pgdir, (char*)a, 0);
+// //         if (!pte)
+// //             a = PGADDR(PDX(a) + 1, 0, 0) - PGSIZE;
+// //         else if ((*pte & PTE_P) != 0) {
+// //             pa = PTE_ADDR(*pte);
+// //             // if (pa == 0)
+// //             //     panic("kfree");
+// //             char* v = K_P2V(pa);
+// //             kmem_free(v);
+// //             *pte = 0;
+// //         }
+// //     }
+// //     return newsz;
+// // }

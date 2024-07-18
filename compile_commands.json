@@ -1,1 +1,146 @@
-[]
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-fno-pic",
+      "-fno-builtin",
+      "-fno-strict-aliasing",
+      "-O1",
+      "-Wall",
+      "-ggdb",
+      "-m32",
+      "-Wno-error",
+      "-fno-omit-frame-pointer",
+      "-std=gnu99",
+      "-I.",
+      "-fno-stack-protector",
+      "-c",
+      "-o",
+      "./obj/loader.o",
+      "./src/loader.c"
+    ],
+    "directory": "/home/imwyf/my_xv6_OS",
+    "file": "/home/imwyf/my_xv6_OS/src/loader.c",
+    "output": "/home/imwyf/my_xv6_OS/obj/loader.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-fno-pic",
+      "-fno-builtin",
+      "-fno-strict-aliasing",
+      "-O1",
+      "-Wall",
+      "-ggdb",
+      "-m32",
+      "-Wno-error",
+      "-fno-omit-frame-pointer",
+      "-std=gnu99",
+      "-I.",
+      "-fno-stack-protector",
+      "-c",
+      "-o",
+      "./obj/boot.o",
+      "./src/boot.S"
+    ],
+    "directory": "/home/imwyf/my_xv6_OS",
+    "file": "/home/imwyf/my_xv6_OS/src/boot.S",
+    "output": "/home/imwyf/my_xv6_OS/obj/boot.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-fno-pic",
+      "-fno-builtin",
+      "-fno-strict-aliasing",
+      "-O1",
+      "-Wall",
+      "-ggdb",
+      "-m32",
+      "-Wno-error",
+      "-fno-omit-frame-pointer",
+      "-std=gnu99",
+      "-I.",
+      "-fno-stack-protector",
+      "-c",
+      "-o",
+      "./obj/kernel_entry.o",
+      "./src/kernel_entry.S"
+    ],
+    "directory": "/home/imwyf/my_xv6_OS",
+    "file": "/home/imwyf/my_xv6_OS/src/kernel_entry.S",
+    "output": "/home/imwyf/my_xv6_OS/obj/kernel_entry.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-fno-pic",
+      "-fno-builtin",
+      "-fno-strict-aliasing",
+      "-O1",
+      "-Wall",
+      "-ggdb",
+      "-m32",
+      "-Wno-error",
+      "-fno-omit-frame-pointer",
+      "-std=gnu99",
+      "-I.",
+      "-fno-stack-protector",
+      "-c",
+      "-o",
+      "./obj/main.o",
+      "./src/main.c"
+    ],
+    "directory": "/home/imwyf/my_xv6_OS",
+    "file": "/home/imwyf/my_xv6_OS/src/main.c",
+    "output": "/home/imwyf/my_xv6_OS/obj/main.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-fno-pic",
+      "-fno-builtin",
+      "-fno-strict-aliasing",
+      "-O1",
+      "-Wall",
+      "-ggdb",
+      "-m32",
+      "-Wno-error",
+      "-fno-omit-frame-pointer",
+      "-std=gnu99",
+      "-I.",
+      "-fno-stack-protector",
+      "-c",
+      "-o",
+      "./obj/kernel_mem.o",
+      "./src/kernel_mem.c"
+    ],
+    "directory": "/home/imwyf/my_xv6_OS",
+    "file": "/home/imwyf/my_xv6_OS/src/kernel_mem.c",
+    "output": "/home/imwyf/my_xv6_OS/obj/kernel_mem.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-fno-pic",
+      "-fno-builtin",
+      "-fno-strict-aliasing",
+      "-O1",
+      "-Wall",
+      "-ggdb",
+      "-m32",
+      "-Wno-error",
+      "-fno-omit-frame-pointer",
+      "-std=gnu99",
+      "-I.",
+      "-fno-stack-protector",
+      "-c",
+      "-o",
+      "./obj/lib.o",
+      "./src/lib.c"
+    ],
+    "directory": "/home/imwyf/my_xv6_OS",
+    "file": "/home/imwyf/my_xv6_OS/src/lib.c",
+    "output": "/home/imwyf/my_xv6_OS/obj/lib.o"
+  }
+]

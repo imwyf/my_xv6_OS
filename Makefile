@@ -81,14 +81,11 @@ QEMUOPTS = -drive file=$(OBJDIR)/myos.img,index=0,media=disk,format=raw -smp $(C
 qemu: clean myos.img
 	$(QEMU) -serial mon:stdio $(QEMUOPTS)
 
-.gdbinit: .gdbinit.tmpl
-	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
-
-qemu-gdb: clean myos.img .gdbinit
+qemu-gdb: clean myos.img
 	@echo "*** Now run 'gdb'." 1>&2
 	$(QEMU) -serial mon:stdio $(QEMUOPTS) -S $(QEMUGDB)
 
 clean:
 	rm -f ./obj/* *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
-	*.o *.d *.asm *.sym *.out bootloader kernel myos.img .gdbinit
+	*.o *.d *.asm *.sym *.out bootloader kernel myos.img
 

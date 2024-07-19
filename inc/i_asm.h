@@ -160,20 +160,19 @@ invlpg(void* addr)
                  : "memory");
 }
 
+struct segdesc;
 static inline void
-lidt(void* p)
+lgdt(struct segdesc* p, int size)
 {
-    asm volatile("lidt (%0)"
-                 :
-                 : "r"(p));
-}
+    volatile uint16_t pd[3];
 
-static inline void
-lgdt(void* p)
-{
+    pd[0] = size - 1;
+    pd[1] = (uint32_t)p;
+    pd[2] = (uint32_t)p >> 16;
+
     asm volatile("lgdt (%0)"
                  :
-                 : "r"(p));
+                 : "r"(pd));
 }
 
 static inline void
@@ -298,22 +297,22 @@ read_esp(void)
     return esp;
 }
 
-static inline void
-cpuid(uint32_t info, uint32_t* eaxp, uint32_t* ebxp, uint32_t* ecxp, uint32_t* edxp)
-{
-    uint32_t eax, ebx, ecx, edx;
-    asm volatile("cpuid"
-                 : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-                 : "a"(info));
-    if (eaxp)
-        *eaxp = eax;
-    if (ebxp)
-        *ebxp = ebx;
-    if (ecxp)
-        *ecxp = ecx;
-    if (edxp)
-        *edxp = edx;
-}
+// static inline void
+// cpuid(uint32_t info, uint32_t* eaxp, uint32_t* ebxp, uint32_t* ecxp, uint32_t* edxp)
+// {
+//     uint32_t eax, ebx, ecx, edx;
+//     asm volatile("cpuid"
+//                  : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
+//                  : "a"(info));
+//     if (eaxp)
+//         *eaxp = eax;
+//     if (ebxp)
+//         *ebxp = ebx;
+//     if (ecxp)
+//         *ecxp = ecx;
+//     if (edxp)
+//         *edxp = edx;
+// }
 
 static inline uint64_t
 read_tsc(void)

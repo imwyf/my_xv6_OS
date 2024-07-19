@@ -21,6 +21,8 @@ SRCS = \
 	kernel_entry.S\
 	main.c\
 	kernel_mem.c\
+	cpu.c\
+	apic.c\
 	lib.c
 
 # 待链接的 obj 文件列表

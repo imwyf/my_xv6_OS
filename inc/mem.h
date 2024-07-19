@@ -1,5 +1,5 @@
-#ifndef _MMU_H_
-#define _MMU_H_
+#ifndef _MEM_H_
+#define _MEM_H_
 
 /*************************************************************************
  * mem.h - 定义有关于物理/虚拟内存相关的值和结构
@@ -237,18 +237,21 @@ struct segdesc {
     }
 // Normal segment
 #define SEG(type, base, lim, dpl)                                     \
+    (struct segdesc)                                                  \
     {                                                                 \
         ((lim) >> 12) & 0xffff, (base)&0xffff, ((base) >> 16) & 0xff, \
             type, 1, dpl, 1, (unsigned)(lim) >> 28, 0, 0, 1, 1,       \
             (unsigned)(base) >> 24                                    \
     }
 #define SEG16(type, base, lim, dpl)                             \
-    (struct Segdesc)                                            \
+    (struct segdesc)                                            \
     {                                                           \
         (lim) & 0xffff, (base)&0xffff, ((base) >> 16) & 0xff,   \
             type, 1, dpl, 1, (unsigned)(lim) >> 16, 0, 0, 1, 0, \
             (unsigned)(base) >> 24                              \
     }
+
+#define DPL_USER 0x3 // User DPL
 
 #endif /* !__ASSEMBLER__ */
 // various segment selectors.
@@ -351,4 +354,4 @@ struct Pseudodesc {
 
 #endif /* !__ASSEMBLER__ */
 
-#endif /* !_MMU_H_ */
+#endif /* !_MEM_H_ */

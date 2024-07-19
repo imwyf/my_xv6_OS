@@ -10,5 +10,10 @@ void kmem_init();
 
 /* mcpu.c */
 void mcpu_init();
+struct cpu* mycpu(void);
+int cpuid();
+
+/* apic.c */
+int lapicid(void);
 
 #endif /* !_I_KERNEL_H_ */

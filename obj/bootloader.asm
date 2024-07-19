@@ -241,8 +241,8 @@ outb(int port, uint8_t data)
     7e90:	c1 ee 09             	shr    $0x9,%esi
     7e93:	83 c6 02             	add    $0x2,%esi
     while (dst < end) {
-    7e96:	39 df                	cmp    %ebx,%edi
-    7e98:	76 1a                	jbe    7eb4 <read_seg+0x3e>
+    7e96:	39 fb                	cmp    %edi,%ebx
+    7e98:	73 1a                	jae    7eb4 <read_seg+0x3e>
         read_sect((uint8_t*)dst, sect_no);
     7e9a:	83 ec 08             	sub    $0x8,%esp
     7e9d:	56                   	push   %esi
@@ -254,8 +254,8 @@ outb(int port, uint8_t data)
     7eaa:	83 c6 01             	add    $0x1,%esi
     while (dst < end) {
     7ead:	83 c4 10             	add    $0x10,%esp
-    7eb0:	39 df                	cmp    %ebx,%edi
-    7eb2:	77 e6                	ja     7e9a <read_seg+0x24>
+    7eb0:	39 fb                	cmp    %edi,%ebx
+    7eb2:	72 e6                	jb     7e9a <read_seg+0x24>
 }
     7eb4:	8d 65 f4             	lea    -0xc(%ebp),%esp
     7eb7:	5b                   	pop    %ebx
@@ -300,8 +300,8 @@ outb(int port, uint8_t data)
     for (; phdr < ephdr; phdr++) // 遍历Table中每一项
     7f10:	83 c3 20             	add    $0x20,%ebx
     7f13:	83 c4 10             	add    $0x10,%esp
-    7f16:	39 de                	cmp    %ebx,%esi
-    7f18:	77 e5                	ja     7eff <loader+0x43>
+    7f16:	39 f3                	cmp    %esi,%ebx
+    7f18:	72 e5                	jb     7eff <loader+0x43>
     ((void (*)(void))(ELF_HEADER_TMP->e_entry))(); // 将e_entry作为函数指针跳入
     7f1a:	ff 15 18 00 01 00    	call   *0x10018
 }

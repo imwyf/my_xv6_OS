@@ -7,6 +7,7 @@
 
 /* kernel_mem.c */
 void kmem_init();
+void gdt_init();
 
 /* mcpu.c */
 void mcpu_init();

@@ -32,5 +32,7 @@ int main()
     cprintf("------> kmem_init() finish!\n");
     mcpu_init();
     cprintf("------> mcpu_init() finish!\n");
+    gdt_init();
+    cprintf("------> gdt_init() finish!\n");
     hlt();
 }

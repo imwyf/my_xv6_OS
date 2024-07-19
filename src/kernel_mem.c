@@ -2,6 +2,7 @@
  * kernel_mem.c - 负责内存分配、地址映射、页表建立等初始化工作
  *************************************************************************/
 // TODO:加锁
+#include "inc/cpu.h"
 #include "inc/i_asm.h"
 #include "inc/mem.h"
 #include "inc/proc.h"
@@ -12,6 +13,7 @@
 extern char end[]; // 内核的 ELF 文件结束后的第一个虚拟地址，定义于 kernel.ld
 extern char edata[]; // 数据段结尾
 extern char data[]; // 数据段开始
+extern struct cpu cpus[MAX_CPU];
 
 pde_t* kernel_pgdir; // 内核页表(一级页表的基址)
 
@@ -233,6 +235,22 @@ static pte_t* get_pte(pde_t* pgdir, const void* vaddr, int need_alloc, int perm)
         *pde = K_V2P(pte) | perm | PTE_P; // 将二级页表的物理地址写入页目录项
     }
     return &pte[PTX(vaddr)]; // 从二级页表中取出对应的页表项
+}
+
+void gdt_init(void)
+{
+    struct cpu* c;
+
+    // Map "logical" addresses to virtual addresses using identity map.
+    // Cannot share a CODE descriptor for both kernel and user
+    // because it would have to have DPL_USR, but the CPU forbids
+    // an interrupt from CPL=0 to DPL=3.
+    c = &cpus[cpuid()];
+    c->gdt[SEG_SELECTOR_KCODE] = SEG(STA_X | STA_R, 0, 0xffffffff, 0);
+    c->gdt[SEG_SELECTOR_KDATA] = SEG(STA_W, 0, 0xffffffff, 0);
+    c->gdt[SEG_SELECTOR_UCODE] = SEG(STA_X | STA_R, 0, 0xffffffff, DPL_USER);
+    c->gdt[SEG_SELECTOR_UDATA] = SEG(STA_W, 0, 0xffffffff, DPL_USER);
+    lgdt(c->gdt, sizeof(c->gdt));
 }
 
 // // // Deallocate user pages to bring the process size from oldsz to

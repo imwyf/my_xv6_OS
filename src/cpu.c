@@ -111,22 +111,6 @@ mpconfig(struct mp** pmp)
     return conf;
 }
 
-void seginit(void)
-{
-    struct cpu* c;
-
-    // Map "logical" addresses to virtual addresses using identity map.
-    // Cannot share a CODE descriptor for both kernel and user
-    // because it would have to have DPL_USR, but the CPU forbids
-    // an interrupt from CPL=0 to DPL=3.
-    c = &cpus[cpuid()];
-    c->gdt[SEG_SELECTOR_KCODE] = SEG(STA_X | STA_R, 0, 0xffffffff, 0);
-    c->gdt[SEG_SELECTOR_KDATA] = SEG(STA_W, 0, 0xffffffff, 0);
-    c->gdt[SEG_SELECTOR_UCODE] = SEG(STA_X | STA_R, 0, 0xffffffff, DPL_USER);
-    c->gdt[SEG_SELECTOR_UDATA] = SEG(STA_W, 0, 0xffffffff, DPL_USER);
-    lgdt(c->gdt, sizeof(c->gdt));
-}
-
 void mcpu_init(void)
 {
     uint8_t *p, *e;
@@ -175,5 +159,4 @@ void mcpu_init(void)
         outb(0x22, 0x70); // Select IMCR
         outb(0x23, inb(0x23) | 1); // Mask external interrupts.
     }
-    seginit();
 }

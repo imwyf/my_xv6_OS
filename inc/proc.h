@@ -1,3 +1,5 @@
+#ifndef _PROC_H_
+#define _PROC_H_
 
 #include "inc/types.h"
 
@@ -128,3 +130,4 @@ struct trapframe {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
+#endif /* !_PROC_H_ */

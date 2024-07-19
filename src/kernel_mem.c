@@ -237,6 +237,9 @@ static pte_t* get_pte(pde_t* pgdir, const void* vaddr, int need_alloc, int perm)
     return &pte[PTX(vaddr)]; // 从二级页表中取出对应的页表项
 }
 
+/**
+ * 内核完全运行在高地址之上了，相应的一些结构的地址也得切换到高地址上面去，比如说 GDTR 中存放的 GDT 地址和界限。
+ */
 void gdt_init(void)
 {
     struct cpu* c;

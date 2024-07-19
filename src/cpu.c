@@ -50,9 +50,13 @@ sum(uint8_t* addr, int len)
     return sum;
 }
 
-// Look for an MP structure in the len bytes at addr.
+/* ****************************************** 多处理器支持 ********************************************** */
+
+/**
+ * 在 [a,a+len] 这一段内存寻找 floating pointer 结构
+ */
 static struct mp*
-mpsearch1(uint32_t a, int len)
+search_fp(uint32_t a, int len)
 {
     uint8_t *e, *p, *addr;
 
@@ -64,43 +68,40 @@ mpsearch1(uint32_t a, int len)
     return 0;
 }
 
-// Search for the MP Floating Pointer Structure, which according to the
-// spec is in one of the following three locations:
-// 1) in the first KB of the EBDA;
-// 2) in the last KB of system base memory;
-// 3) in the BIOS ROM between 0xE0000 and 0xFFFFF.
+/**
+ * 寻找 floating pointer 结构
+ */
 static struct mp*
-mpsearch(void)
+find_fp(void)
 {
     uint8_t* bda;
     uint32_t p;
     struct mp* mp;
 
-    bda = (uint8_t*)K_P2V(0x400);
-    if ((p = ((bda[0x0F] << 8) | bda[0x0E]) << 4)) {
-        if ((mp = mpsearch1(p, 1024)))
+    bda = (uint8_t*)K_P2V(0x400); // BIOS Data Area地址
+    if ((p = ((bda[0x0F] << 8) | bda[0x0E]) << 4)) { //在EBDA中最开始1K中寻找
+        if ((mp = search_fp(p, 1024)))
             return mp;
-    } else {
+    } else { //在基本内存的最后1K中查找
         p = ((bda[0x14] << 8) | bda[0x13]) * 1024;
-        if ((mp = mpsearch1(p - 1024, 1024)))
+        if ((mp = search_fp(p - 1024, 1024)))
             return mp;
     }
-    return mpsearch1(0xF0000, 0x10000);
+    return search_fp(0xF0000, 0x10000); //在0xf0000~0xfffff中查找
 }
-// Search for an MP configuration table.  For now,
-// don't accept the default configurations (physaddr == 0).
-// Check for correct signature, calculate the checksum and,
-// if correct, check the version.
-// To do: check extended table checksum.
+
+/**
+ * 寻找 MP Configuration Table
+ */
 static struct mpconf*
-mpconfig(struct mp** pmp)
+find_mpct(struct mp** pmp)
 {
     struct mpconf* conf;
     struct mp* mp;
 
-    if ((mp = mpsearch()) == 0 || mp->physaddr == 0)
+    if ((mp = find_fp()) == 0 || mp->physaddr == 0)
         return 0;
-    conf = (struct mpconf*)K_P2V((uint32_t)mp->physaddr);
+    conf = (struct mpconf*)K_P2V((uint32_t)mp->physaddr); // 根据 floating pointer 找到 MP Configuration Table
     if (memcmp(conf, "PCMP", 4) != 0)
         return 0;
     if (conf->version != 1 && conf->version != 4)
@@ -120,18 +121,19 @@ void mcpu_init(void)
     struct mpproc* proc;
     struct mpioapic* ioapic;
 
-    conf = mpconfig(&mp);
+    /* 寻找有多少个处理器表项，多少个处理器表项就代表有多少个处理器，然后将相关信息填进全局的 CPU 数据结构 */
+    conf = find_mpct(&mp);
     ismp = 1;
     lapic = (uint32_t*)conf->lapicaddr;
-    for (p = (uint8_t*)(conf + 1), e = (uint8_t*)conf + conf->length; p < e;) {
-        switch (*p) {
-        case MPPROC:
+    for (p = (uint8_t*)(conf + 1), e = (uint8_t*)conf + conf->length; p < e;) { // 跳过表头，从第一个表项开始for循环
+        switch (*p) { //选取当前表项
+        case MPPROC: //如果是处理器
             proc = (struct mpproc*)p;
             if (num_cpu < MAX_CPU) {
-                cpus[num_cpu].apicid = proc->apicid; // apicid may differ from num_cpu
-                num_cpu++;
+                cpus[num_cpu].apicid = proc->apicid; // apic id可以标识一个CPU
+                num_cpu++; //找到一个CPU表项，CPU数量加1
             }
-            p += sizeof(struct mpproc);
+            p += sizeof(struct mpproc); //跳过当前CPU表项继续循环
             continue;
         case MPIOAPIC:
             ioapic = (struct mpioapic*)p;

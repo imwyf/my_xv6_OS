@@ -17,6 +17,9 @@ char* safestrcpy(char* s, const char* t, int n);
 int strlen(const char* s);
 
 void cons_init(void);
+void cons_uselock();
 void cprintf(char* fmt, ...);
+
+void spin(int ms);
 
 #endif /* !_I_LIB_H_ */

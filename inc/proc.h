@@ -1,6 +1,11 @@
 #ifndef _PROC_H_
 #define _PROC_H_
 
+/*************************************************************************
+ * proc.h - 定义进程调度相关的结构
+ *************************************************************************/
+
+#include "inc/lock.h"
 #include "inc/types.h"
 
 // Task state segment（TSS）：操作系统在进行进程切换时保存原进程现场信息的段，它保存 CPU 中各寄存器的值到内存中
@@ -54,7 +59,7 @@ struct taskstate {
 //  describe; the stack pointer is the address of the context.
 //  The layout of the context matches the layout of the stack in swtch.S
 //  at the "Switch stacks" comment. Switch doesn't save eip explicitly,
-//  but it is on the stack and allocproc() manipulates it.
+//  but it is on the stack and () manipulates it.
 struct context {
     uint32_t edi;
     uint32_t esi;
@@ -63,29 +68,33 @@ struct context {
     uint32_t eip;
 };
 
-enum procstate { UNUSED,
-    EMBRYO,
+enum procstate {
+    DIED,
     SLEEPING,
     RUNNABLE,
     RUNNING,
-    ZOMBIE };
+    ZOMBIE
+};
 
 // 一个进程由一个 proc 结构描述
 struct proc {
     uint32_t sz; // Size of process memory (bytes)
     pde_t* pgdir; // 进程的页表地址
     char* kstack; // Bottom of kernel stack for this process
-    enum procstate state; // 进程的状态机
+    enum procstate state; // 进程的状态
     int pid; // 进程id
     struct proc* parent; // 父进程指针
     struct trapframe* tf; // 对于当前系统调用的陷阱页指针
     struct context* context; // swtch() here to run process
+    // struct spinlock lock;
     void* chan; // If non-zero, sleeping on chan
     int killed; // If non-zero, have been killed
     // struct file *ofile[NOFILE];  // Open files
     // struct inode* cwd; // Current directory
     char name[16]; // Process name (debugging)
 };
+
+#define MAX_PROC 64 // 最大进程数
 
 // PAGEBREAK: 36
 //  Layout of the trap frame built on the stack by the

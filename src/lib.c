@@ -1,5 +1,7 @@
 
 #include "inc/i_asm.h"
+#include "inc/i_kernel.h"
+#include "inc/lock.h"
 #include "inc/mem.h"
 #include "inc/types.h"
 
@@ -515,6 +517,8 @@ static struct
     uint8_t buf[CONSBUFSIZE];
     uint32_t rpos;
     uint32_t wpos;
+    struct spinlock lock;
+    int use_lock;
 } cons;
 
 // called by device interrupt routines to feed input characters
@@ -566,6 +570,9 @@ cons_putc(int c)
 // initialize the console devices
 void cons_init(void)
 {
+    initlock(&cons.lock, "console");
+    cons.use_lock = 0;
+
     cga_init();
     kbd_init();
     serial_init();
@@ -573,6 +580,8 @@ void cons_init(void)
     if (!serial_exists)
         cprintf("Serial port does not exist!\n");
 }
+
+void cons_uselock() { cons.use_lock = 1; }
 
 // `High'-level console I/O.  Used by readline and cprintf.
 
@@ -623,16 +632,12 @@ printint(int xx, int base, int sign)
 
 void cprintf(char* fmt, ...)
 {
-    int i, c, locking;
+    int i, c;
     uint32_t* argp;
     char* s;
 
-    // locking = cons.locking;
-    // if (locking)
-    //     acquire(&cons.lock);
-
-    // if (fmt == 0)
-    //     panic("null fmt");
+    if (cons.use_lock)
+        acquire(&cons.lock);
 
     argp = (uint32_t*)(void*)(&fmt + 1);
     for (i = 0; (c = fmt[i] & 0xff) != 0; i++) {
@@ -668,6 +673,16 @@ void cprintf(char* fmt, ...)
         }
     }
 
-    // if (locking)
-    //     release(&cons.lock);
+    if (cons.use_lock)
+        release(&cons.lock);
 }
+
+/**
+ * 自旋 ms 微秒
+ */
+void spin(int ms)
+{
+    // TODO：
+}
+
+// void error()

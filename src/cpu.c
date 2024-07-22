@@ -8,15 +8,14 @@
 #include "inc/i_lib.h"
 #include "inc/types.h"
 
-volatile uint32_t* lapic;
+extern volatile uint32_t* lapic; // 定义于 interrupt.c
+extern volatile uint8_t ioapic_id; // 定义于 interrupt.c
 struct cpu cpus[MAX_CPU];
 int num_cpu;
-uint8_t ioapicid;
 
 /* ****************************************** cpu 结构支持 ********************************************** */
 
-struct cpu*
-mycpu(void)
+struct cpu* mycpu(void)
 {
     int apicid, i;
 
@@ -25,13 +24,14 @@ mycpu(void)
         hlt();
     }
 
-    apicid = lapicid();
+    apicid = lapic_id();
     // APIC IDs are not guaranteed to be contiguous. Maybe we should have
     // a reverse map, or reserve a register to store &cpus[i].
     for (i = 0; i < num_cpu; ++i) {
         if (cpus[i].apicid == apicid)
             return &cpus[i];
     }
+    return NULL;
 }
 
 int cpuid()
@@ -39,8 +39,7 @@ int cpuid()
     return mycpu() - cpus;
 }
 
-static uint8_t
-sum(uint8_t* addr, int len)
+static uint8_t sum(uint8_t* addr, int len)
 {
     int i, sum;
 
@@ -112,7 +111,10 @@ find_mpct(struct mp** pmp)
     return conf;
 }
 
-void mcpu_init(void)
+/**
+ * 检测其他处理器，并将其配置写入 cpu 结构
+ */
+void conf_mcpu(void)
 {
     uint8_t *p, *e;
     int ismp;
@@ -137,7 +139,7 @@ void mcpu_init(void)
             continue;
         case MPIOAPIC:
             ioapic = (struct mpioapic*)p;
-            ioapicid = ioapic->apicno;
+            ioapic_id = ioapic->apicno;
             p += sizeof(struct mpioapic);
             continue;
         case MPBUS:

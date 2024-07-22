@@ -1,21 +1,36 @@
 /*************************************************************************
  * kernel_mem.c - 负责内存分配、地址映射、页表建立等初始化工作
  *************************************************************************/
-// TODO:加锁
+
 #include "inc/cpu.h"
 #include "inc/i_asm.h"
+#include "inc/i_kernel.h"
+#include "inc/lock.h"
 #include "inc/mem.h"
 #include "inc/proc.h"
 #include "inc/types.h"
 #include <inc/i_lib.h>
-// #include "inc/lock.h"
 
 extern char end[]; // 内核的 ELF 文件结束后的第一个虚拟地址，定义于 kernel.ld
 extern char edata[]; // 数据段结尾
 extern char data[]; // 数据段开始
 extern struct cpu cpus[MAX_CPU];
 
-pde_t* kernel_pgdir; // 内核页表(一级页表的基址)
+static pde_t* kernel_pgdir; // 内核页表(一级页表的基址)
+
+/* ********************************************** 物理内存分配器 ******************************************** */
+
+// 链表节点，用于维护空闲页表
+struct list_node {
+    struct list_node* next;
+};
+
+// 内存分配管理器
+struct kem_man {
+    struct spinlock lock;
+    int use_lock;
+    struct list_node* freelist;
+} kmem;
 
 /* 下面是本文件使用的函数的声明 */
 void kmem_free_pages(void* start, void* end);
@@ -28,25 +43,17 @@ void switch_pgdir(struct proc* p);
  */
 void kmem_init()
 {
-    // initlock(&kmem.lock, "kmem");
-    // kmem.use_lock = 0;
+    initlock(&kmem.lock, "kmem");
+    kmem.use_lock = 0;
     kmem_free_pages(end, K_P2V(P_ADDR_LOWMEM)); // 释放[end, 4MB]部分给新的内核页表使用
     kernel_pgdir = set_kernel_pgdir(); // 设置内核页表
     switch_pgdir(NULL); // NULL 代表切换为内核页表
 }
 
-/* ********************************************** 物理内存分配器 ******************************************** */
-
-// 链表节点，用于维护空闲页表
-struct list_node {
-    struct list_node* next;
-};
-
-struct {
-    // struct spinlock lock;
-    // int use_lock;
-    struct list_node* freelist;
-} kmem; // 内存分配管理器
+void kmem_uselock()
+{
+    kmem.use_lock = 1;
+}
 
 /**
  * 释放虚拟地址[start, end]之间的内存
@@ -70,13 +77,13 @@ void kmem_free(char* vaddr)
 
     memset(vaddr, 1, PGSIZE); // 清空该页内存
 
-    // if (kmem.use_lock)
-    //     acquire(&kmem.lock);
+    if (kmem.use_lock)
+        acquire(&kmem.lock);
     struct list_node* node = (struct list_node*)vaddr;
     node->next = kmem.freelist;
     kmem.freelist = node;
-    // if (kmem.use_lock)
-    //     release(&kmem.lock);
+    if (kmem.use_lock)
+        release(&kmem.lock);
 }
 
 /**
@@ -86,13 +93,13 @@ char* kmem_alloc(void)
 {
     struct list_node* node = NULL;
 
-    // if (kmem.use_lock)
-    //     acquire(&kmem.lock);
+    if (kmem.use_lock)
+        acquire(&kmem.lock);
     node = kmem.freelist;
     if (node)
         kmem.freelist = node->next;
-    // if (kmem.use_lock)
-    //     release(&kmem.lock);
+    if (kmem.use_lock)
+        release(&kmem.lock);
     return (char*)node;
 }
 
@@ -240,7 +247,7 @@ static pte_t* get_pte(pde_t* pgdir, const void* vaddr, int need_alloc, int perm)
 /**
  * 内核完全运行在高地址之上了，相应的一些结构的地址也得切换到高地址上面去，比如说 GDTR 中存放的 GDT 地址和界限。
  */
-void gdt_init(void)
+void conf_gdt(void)
 {
     struct cpu* c;
 

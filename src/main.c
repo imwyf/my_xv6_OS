@@ -5,6 +5,7 @@
 #include "inc/i_kernel.h"
 #include "inc/i_lib.h"
 #include "inc/mem.h"
+#include "inc/proc.h"
 #include "inc/types.h"
 
 extern pde_t* kernel_pgdir;
@@ -23,6 +24,8 @@ pde_t entry_pgdir[NPDENTRIES]
           = (0) | PTE_P | PTE_W | PTE_PS,
       };
 
+void use_lock();
+
 int main()
 {
     cons_init();
@@ -30,9 +33,19 @@ int main()
     cprintf("------> Hello, OS World!\n");
     kmem_init(); // 内存管理初始化
     cprintf("------> kmem_init() finish!\n");
-    mcpu_init();
-    cprintf("------> mcpu_init() finish!\n");
-    gdt_init();
-    cprintf("------> gdt_init() finish!\n");
+    conf_mcpu();
+    cprintf("------> conf_mcpu() finish!\n");
+    conf_gdt();
+    cprintf("------> conf_gdt() finish!\n");
+    interrupt_init();
+    cprintf("------> interrupt_init() finish!\n");
+    proc_init();
+    cprintf("------> proc_init() finish!\n");
     hlt();
+}
+
+void use_lock()
+{
+    cons_uselock();
+    kmem_uselock();
 }

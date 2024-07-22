@@ -336,4 +336,24 @@ xchg(volatile uint32_t* addr, uint32_t newval)
     return result;
 }
 
+static inline void
+loadgs(uint16_t v)
+{
+    asm volatile("movw %0, %%gs"
+                 :
+                 : "r"(v));
+}
+
+static inline void
+cli(void)
+{
+    asm volatile("cli");
+}
+
+static inline void
+sti(void)
+{
+    asm volatile("sti");
+}
+
 #endif /* !_I_ASM_H_ */
